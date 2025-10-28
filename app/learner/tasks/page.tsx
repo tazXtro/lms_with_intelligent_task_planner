@@ -1,9 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { NButton } from "@/components/ui/nbutton"
+import { NCard } from "@/components/ui/ncard"
+import { NInput } from "@/components/ui/ninput"
+import { NLabel } from "@/components/ui/nlabel"
 import {
   Plus,
   BookOpen,
@@ -16,6 +17,7 @@ import {
   X,
   LogOut,
   Settings,
+  Brain,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -106,7 +108,6 @@ export default function TaskPlannerPage() {
   }
 
   const handleGenerateAiSuggestions = (task: Task) => {
-    // Simulate AI generating task breakdowns
     const suggestions = [
       `Break "${task.title}" into 3-4 manageable subtasks`,
       `Suggest optimal study schedule: 2 hours daily for 3 days`,
@@ -125,24 +126,24 @@ export default function TaskPlannerPage() {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "bg-destructive/10 text-destructive border-destructive/20"
+        return "bg-destructive/20 text-destructive border-destructive"
       case "medium":
-        return "bg-accent/10 text-accent border-accent/20"
+        return "bg-accent/20 text-accent border-accent"
       case "low":
-        return "bg-primary/10 text-primary border-primary/20"
+        return "bg-main/20 text-main border-main"
       default:
-        return "bg-muted text-muted-foreground"
+        return "bg-foreground/10 text-foreground border-foreground"
     }
   }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "completed":
-        return <CheckCircle2 className="w-5 h-5 text-accent" />
+        return <CheckCircle2 className="w-5 h-5 text-success" />
       case "in-progress":
-        return <Clock className="w-5 h-5 text-primary" />
+        return <Clock className="w-5 h-5 text-main" />
       default:
-        return <AlertCircle className="w-5 h-5 text-muted-foreground" />
+        return <AlertCircle className="w-5 h-5 text-foreground/50" />
     }
   }
 
@@ -150,45 +151,45 @@ export default function TaskPlannerPage() {
     <div className="min-h-screen bg-background">
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 z-40 ${
+        className={`fixed left-0 top-0 h-screen w-64 bg-secondary-background border-r-4 border-border transform transition-transform duration-300 z-40 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        <div className="p-6 border-b border-sidebar-border">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-primary-foreground" />
+        <div className="p-6 border-b-2 border-border">
+          <Link href="/" className="flex items-center gap-3 hover:-translate-y-1 transition-transform">
+            <div className="w-10 h-10 bg-main border-2 border-border rounded-base flex items-center justify-center shadow-shadow">
+              <Brain className="w-6 h-6 text-main-foreground" />
             </div>
-            <span className="font-bold text-lg">DigiGyan</span>
+            <span className="font-heading text-xl">DigiGyan</span>
           </Link>
         </div>
 
         <nav className="p-4 space-y-2">
           <Link
             href="/learner/dashboard"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent/10 transition-colors"
+            className="flex items-center gap-3 px-4 py-3 rounded-base text-foreground hover:bg-main/5 transition-colors font-base"
           >
             <BookOpen className="w-5 h-5" />
             Dashboard
           </Link>
           <Link
             href="/learner/tasks"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary font-medium"
+            className="flex items-center gap-3 px-4 py-3 rounded-base bg-main/10 border-2 border-border text-foreground font-heading"
           >
             <Clock className="w-5 h-5" />
             Task Planner
           </Link>
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-sidebar-border space-y-2">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t-2 border-border space-y-2">
           <Link
             href="/learner/settings"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent/10 transition-colors"
+            className="flex items-center gap-3 px-4 py-3 rounded-base text-foreground hover:bg-main/5 transition-colors font-base"
           >
             <Settings className="w-5 h-5" />
             Settings
           </Link>
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-destructive/10 transition-colors">
+          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-base text-foreground hover:bg-destructive/10 transition-colors font-base">
             <LogOut className="w-5 h-5" />
             Sign Out
           </button>
@@ -198,22 +199,25 @@ export default function TaskPlannerPage() {
       {/* Main Content */}
       <div className="md:ml-64">
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 bg-background border-b border-border">
-          <div className="px-6 py-4 flex items-center justify-between">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden p-2 hover:bg-muted rounded-lg transition-colors"
-            >
-              {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-            <h1 className="text-2xl font-bold">Task Planner</h1>
-            <Button
+        <header className="sticky top-0 z-30 bg-background border-b-4 border-border">
+          <div className="px-6 py-5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="md:hidden p-2 hover:bg-main/10 rounded-base transition-colors border-2 border-border"
+              >
+                {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+              <h1 className="text-3xl font-heading">Task Planner</h1>
+            </div>
+            <NButton
               onClick={() => setShowNewTaskForm(true)}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              variant="default"
+              size="lg"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-5 h-5 mr-2" />
               New Task
-            </Button>
+            </NButton>
           </div>
         </header>
 
@@ -221,225 +225,235 @@ export default function TaskPlannerPage() {
         <main className="p-6">
           {/* AI Suggestions Panel */}
           {showAiSuggestions && selectedTask && (
-            <Card className="mb-6 p-6 bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  <h3 className="font-semibold text-lg">AI Suggestions for "{selectedTask.title}"</h3>
+            <NCard className="mb-8 p-8 bg-main/5 border-main/20">
+              <div className="flex items-start justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-main border-2 border-border rounded-base flex items-center justify-center">
+                    <Sparkles className="w-6 h-6 text-main-foreground" />
+                  </div>
+                  <h3 className="font-heading text-2xl">AI Suggestions for "{selectedTask.title}"</h3>
                 </div>
                 <button
                   onClick={() => setShowAiSuggestions(false)}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="p-2 hover:bg-destructive/10 rounded-base border-2 border-transparent hover:border-border transition-all"
                 >
-                  ✕
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="space-y-3">
+              <div className="grid gap-4">
                 {aiSuggestions.map((suggestion, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-3 bg-background/50 rounded-lg">
-                    <Sparkles className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-                    <p className="text-sm">{suggestion}</p>
+                  <div key={idx} className="flex items-start gap-4 p-4 bg-secondary-background border-2 border-border rounded-base">
+                    <Sparkles className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+                    <p className="text-sm font-base">{suggestion}</p>
                   </div>
                 ))}
               </div>
-            </Card>
+            </NCard>
           )}
 
           {/* New Task Form */}
           {showNewTaskForm && (
-            <Card className="mb-6 p-6 border-primary/20">
-              <h3 className="font-semibold text-lg mb-4">Create New Task</h3>
-              <div className="space-y-4">
+            <NCard className="mb-8 p-8 border-main/20">
+              <h3 className="font-heading text-2xl mb-5">Create New Task</h3>
+              <div className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Task Title</label>
-                  <Input
+                  <NLabel className="mb-2">Task Title</NLabel>
+                  <NInput
                     placeholder="Enter task title..."
                     value={newTask.title}
                     onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                    className="bg-background"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Course</label>
-                  <Input
+                  <NLabel className="mb-2">Course</NLabel>
+                  <NInput
                     placeholder="Select or enter course..."
                     value={newTask.course}
                     onChange={(e) => setNewTask({ ...newTask, course: e.target.value })}
-                    className="bg-background"
                   />
                 </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleAddTask} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                <div className="flex gap-3">
+                  <NButton onClick={handleAddTask} variant="default">
                     Create Task
-                  </Button>
-                  <Button onClick={() => setShowNewTaskForm(false)} variant="outline" className="bg-transparent">
+                  </NButton>
+                  <NButton onClick={() => setShowNewTaskForm(false)} variant="neutral">
                     Cancel
-                  </Button>
+                  </NButton>
                 </div>
               </div>
-            </Card>
+            </NCard>
           )}
 
           {/* Kanban Board */}
           <div className="grid md:grid-cols-3 gap-6">
             {/* To Do Column */}
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">To Do ({todoTasks.length})</h2>
-                <div className="w-3 h-3 bg-muted-foreground rounded-full"></div>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-2xl font-heading">To Do ({todoTasks.length})</h2>
+                <div className="w-4 h-4 bg-foreground/50 rounded-full"></div>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {todoTasks.map((task) => (
-                  <Card key={task.id} className="p-4 hover:shadow-md transition-shadow cursor-move group" draggable>
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-start gap-2 flex-1">
+                  <NCard key={task.id} className="p-5 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-move group" draggable>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start gap-3 flex-1">
                         {getStatusIcon(task.status)}
                         <div className="flex-1">
-                          <h4 className="font-medium line-clamp-2">{task.title}</h4>
-                          <p className="text-xs text-muted-foreground mt-1">{task.course}</p>
+                          <h4 className="font-heading text-lg line-clamp-2">{task.title}</h4>
+                          <p className="text-xs text-foreground/70 mt-1 font-base">{task.course}</p>
                         </div>
                       </div>
                       <button
                         onClick={() => handleDeleteTask(task.id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-destructive/10 rounded-base"
                       >
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </button>
                     </div>
 
-                    {task.description && <p className="text-sm text-muted-foreground mb-3">{task.description}</p>}
+                    {task.description && <p className="text-sm text-foreground/70 mb-4 font-base">{task.description}</p>}
 
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center justify-between mb-4">
                       <span
-                        className={`text-xs font-medium px-2 py-1 rounded border ${getPriorityColor(task.priority)}`}
+                        className={`text-xs font-heading px-3 py-1 rounded-base border-2 ${getPriorityColor(task.priority)}`}
                       >
                         {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                       </span>
-                      <span className="text-xs text-muted-foreground">{task.dueDate}</span>
+                      <span className="text-xs text-foreground/70 font-base">{task.dueDate}</span>
                     </div>
 
                     {task.subtasks && task.subtasks.length > 0 && (
-                      <div className="mb-3 text-xs text-muted-foreground">Subtasks: {task.subtasks.length}</div>
+                      <div className="mb-4 text-xs text-foreground/70 font-base p-2 bg-main/5 rounded-base border-2 border-border">
+                        Subtasks: {task.subtasks.length}
+                      </div>
                     )}
 
                     <div className="flex gap-2">
-                      <button
+                      <NButton
                         onClick={() => handleUpdateTaskStatus(task.id, "in-progress")}
-                        className="flex-1 px-2 py-1 text-xs bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors"
+                        variant="noShadow"
+                        size="sm"
+                        className="flex-1"
                       >
                         Start
-                      </button>
-                      <button
+                      </NButton>
+                      <NButton
                         onClick={() => handleGenerateAiSuggestions(task)}
-                        className="flex-1 px-2 py-1 text-xs bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors flex items-center justify-center gap-1"
+                        variant="accent"
+                        size="sm"
+                        className="flex-1"
                       >
                         <Sparkles className="w-3 h-3" />
-                        AI Help
-                      </button>
+                        AI
+                      </NButton>
                     </div>
-                  </Card>
+                  </NCard>
                 ))}
               </div>
             </div>
 
             {/* In Progress Column */}
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">In Progress ({inProgressTasks.length})</h2>
-                <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-2xl font-heading">In Progress ({inProgressTasks.length})</h2>
+                <div className="w-4 h-4 bg-main rounded-full animate-pulse"></div>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {inProgressTasks.map((task) => (
-                  <Card
+                  <NCard
                     key={task.id}
-                    className="p-4 hover:shadow-md transition-shadow cursor-move group border-primary/20 bg-primary/5"
+                    className="p-5 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-move group border-main/30 bg-main/5"
                     draggable
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-start gap-2 flex-1">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start gap-3 flex-1">
                         {getStatusIcon(task.status)}
                         <div className="flex-1">
-                          <h4 className="font-medium line-clamp-2">{task.title}</h4>
-                          <p className="text-xs text-muted-foreground mt-1">{task.course}</p>
+                          <h4 className="font-heading text-lg line-clamp-2">{task.title}</h4>
+                          <p className="text-xs text-foreground/70 mt-1 font-base">{task.course}</p>
                         </div>
                       </div>
                       <button
                         onClick={() => handleDeleteTask(task.id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-destructive/10 rounded-base"
                       >
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </button>
                     </div>
 
-                    {task.description && <p className="text-sm text-muted-foreground mb-3">{task.description}</p>}
+                    {task.description && <p className="text-sm text-foreground/70 mb-4 font-base">{task.description}</p>}
 
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center justify-between mb-4">
                       <span
-                        className={`text-xs font-medium px-2 py-1 rounded border ${getPriorityColor(task.priority)}`}
+                        className={`text-xs font-heading px-3 py-1 rounded-base border-2 ${getPriorityColor(task.priority)}`}
                       >
                         {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                       </span>
-                      <span className="text-xs text-muted-foreground">{task.dueDate}</span>
+                      <span className="text-xs text-foreground/70 font-base">{task.dueDate}</span>
                     </div>
 
                     {task.subtasks && task.subtasks.length > 0 && (
-                      <div className="mb-3">
-                        <div className="text-xs text-muted-foreground mb-2">Subtasks: {task.subtasks.length}</div>
-                        <div className="space-y-1">
+                      <div className="mb-4">
+                        <div className="text-xs text-foreground/70 mb-2 font-heading">Subtasks: {task.subtasks.length}</div>
+                        <div className="space-y-2">
                           {task.subtasks.map((subtask, idx) => (
-                            <div key={idx} className="flex items-center gap-2 text-xs">
-                              <input type="checkbox" className="rounded" />
+                            <label key={idx} className="flex items-center gap-2 text-xs font-base p-2 rounded-base hover:bg-main/10 cursor-pointer">
+                              <input type="checkbox" className="rounded w-4 h-4" />
                               <span>{subtask}</span>
-                            </div>
+                            </label>
                           ))}
                         </div>
                       </div>
                     )}
 
                     <div className="flex gap-2">
-                      <button
+                      <NButton
                         onClick={() => handleUpdateTaskStatus(task.id, "completed")}
-                        className="flex-1 px-2 py-1 text-xs bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors"
+                        variant="accent"
+                        size="sm"
+                        className="flex-1"
                       >
                         Complete
-                      </button>
-                      <button
+                      </NButton>
+                      <NButton
                         onClick={() => handleGenerateAiSuggestions(task)}
-                        className="flex-1 px-2 py-1 text-xs bg-primary/10 text-primary rounded hover:bg-primary/20 transition-colors flex items-center justify-center gap-1"
+                        variant="noShadow"
+                        size="sm"
+                        className="flex-1"
                       >
                         <Sparkles className="w-3 h-3" />
-                        AI Help
-                      </button>
+                        AI
+                      </NButton>
                     </div>
-                  </Card>
+                  </NCard>
                 ))}
               </div>
             </div>
 
             {/* Completed Column */}
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Completed ({completedTasks.length})</h2>
-                <div className="w-3 h-3 bg-accent rounded-full"></div>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-2xl font-heading">Completed ({completedTasks.length})</h2>
+                <div className="w-4 h-4 bg-success rounded-full"></div>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {completedTasks.map((task) => (
-                  <Card
+                  <NCard
                     key={task.id}
-                    className="p-4 hover:shadow-md transition-shadow cursor-move group opacity-75 bg-accent/5"
+                    className="p-5 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-move group opacity-75 bg-success/5"
                     draggable
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-start gap-2 flex-1">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start gap-3 flex-1">
                         {getStatusIcon(task.status)}
                         <div className="flex-1">
-                          <h4 className="font-medium line-clamp-2 line-through text-muted-foreground">{task.title}</h4>
-                          <p className="text-xs text-muted-foreground mt-1">{task.course}</p>
+                          <h4 className="font-heading text-lg line-clamp-2 line-through text-foreground/70">{task.title}</h4>
+                          <p className="text-xs text-foreground/70 mt-1 font-base">{task.course}</p>
                         </div>
                       </div>
                       <button
                         onClick={() => handleDeleteTask(task.id)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-destructive/10 rounded-base"
                       >
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </button>
@@ -447,13 +461,13 @@ export default function TaskPlannerPage() {
 
                     <div className="flex items-center justify-between">
                       <span
-                        className={`text-xs font-medium px-2 py-1 rounded border ${getPriorityColor(task.priority)}`}
+                        className={`text-xs font-heading px-3 py-1 rounded-base border-2 ${getPriorityColor(task.priority)}`}
                       >
                         {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                       </span>
-                      <span className="text-xs text-muted-foreground">{task.dueDate}</span>
+                      <span className="text-xs text-foreground/70 font-base">{task.dueDate}</span>
                     </div>
-                  </Card>
+                  </NCard>
                 ))}
               </div>
             </div>

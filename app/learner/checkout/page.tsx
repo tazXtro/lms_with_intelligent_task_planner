@@ -3,10 +3,11 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { BookOpen, ArrowLeft, Lock, CheckCircle2, AlertCircle } from "lucide-react"
+import { NButton } from "@/components/ui/nbutton"
+import { NCard } from "@/components/ui/ncard"
+import { NInput } from "@/components/ui/ninput"
+import { NLabel } from "@/components/ui/nlabel"
+import { BookOpen, ArrowLeft, Lock, CheckCircle2, AlertCircle, Brain } from "lucide-react"
 import Link from "next/link"
 
 interface CourseCheckout {
@@ -58,47 +59,47 @@ export default function CheckoutPage() {
   if (paymentSuccess) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md">
-          <Card className="p-8 text-center">
-            <div className="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-8 h-8 text-accent" />
+        <div className="w-full max-w-lg">
+          <NCard className="p-10 text-center">
+            <div className="w-20 h-20 bg-success border-4 border-border rounded-base flex items-center justify-center mx-auto mb-6 shadow-shadow">
+              <CheckCircle2 className="w-10 h-10 text-main-foreground" />
             </div>
-            <h1 className="text-3xl font-bold mb-2">Payment Successful!</h1>
-            <p className="text-muted-foreground mb-6">
+            <h1 className="text-4xl font-heading mb-3">Payment Successful!</h1>
+            <p className="text-foreground/70 mb-8 font-base text-lg">
               You have successfully enrolled in "{courseData.title}". Your course access is now active.
             </p>
 
-            <div className="bg-muted/30 rounded-lg p-4 mb-6 text-left">
-              <p className="text-sm text-muted-foreground mb-2">Order Details</p>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Course:</span>
-                  <span className="font-medium">{courseData.title}</span>
+            <NCard className="p-6 mb-8 bg-main/5 text-left">
+              <p className="text-sm text-foreground/70 mb-4 font-heading">Order Details</p>
+              <div className="space-y-3 text-sm font-base">
+                <div className="flex justify-between pb-3 border-b-2 border-border">
+                  <span className="text-foreground/70">Course:</span>
+                  <span className="font-heading">{courseData.title}</span>
+                </div>
+                <div className="flex justify-between pb-3 border-b-2 border-border">
+                  <span className="text-foreground/70">Amount Paid:</span>
+                  <span className="font-heading">${courseData.price}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Amount Paid:</span>
-                  <span className="font-medium">${courseData.price}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Order ID:</span>
-                  <span className="font-medium">ORD-{Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
+                  <span className="text-foreground/70">Order ID:</span>
+                  <span className="font-heading">ORD-{Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
                 </div>
               </div>
-            </div>
+            </NCard>
 
             <div className="space-y-3">
-              <Link href="/learner/dashboard">
-                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Link href="/learner/dashboard" className="block">
+                <NButton className="w-full" variant="default" size="lg">
                   Go to Dashboard
-                </Button>
+                </NButton>
               </Link>
-              <Link href="/learner/courses">
-                <Button variant="outline" className="w-full bg-transparent">
+              <Link href="/learner/courses" className="block">
+                <NButton variant="neutral" className="w-full" size="lg">
                   Browse More Courses
-                </Button>
+                </NButton>
               </Link>
             </div>
-          </Card>
+          </NCard>
         </div>
       </div>
     )
@@ -106,16 +107,18 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-4">
-          <Link href="/learner/courses" className="p-2 hover:bg-muted rounded-lg transition-colors">
-            <ArrowLeft className="w-5 h-5" />
+      <header className="border-b-4 border-border bg-background sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center gap-4">
+          <Link href="/learner/courses">
+            <NButton variant="neutral" size="icon">
+              <ArrowLeft className="w-5 h-5" />
+            </NButton>
           </Link>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-primary-foreground" />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-main border-2 border-border rounded-base flex items-center justify-center shadow-shadow">
+              <Brain className="w-6 h-6 text-main-foreground" />
             </div>
-            <span className="font-bold text-lg">DigiGyan</span>
+            <span className="font-heading text-xl">DigiGyan</span>
           </div>
         </div>
       </header>
@@ -124,16 +127,19 @@ export default function CheckoutPage() {
         <div className="grid md:grid-cols-3 gap-8">
           {/* Checkout Form */}
           <div className="md:col-span-2">
-            <Card className="p-8">
-              <h1 className="text-3xl font-bold mb-8">Checkout</h1>
+            <NCard className="p-8">
+              <h1 className="text-4xl font-heading mb-8">Checkout</h1>
 
               {/* Payment Method Selection */}
               <div className="mb-8">
-                <h2 className="text-lg font-semibold mb-4">Payment Method</h2>
+                <h2 className="text-xl font-heading mb-4">Payment Method</h2>
                 <div className="space-y-3">
                   <label
-                    className="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-primary/50"
-                    style={{ borderColor: paymentMethod === "card" ? "var(--color-primary)" : "var(--color-border)" }}
+                    className={`flex items-center p-4 border-2 rounded-base cursor-pointer transition-all ${
+                      paymentMethod === "card" 
+                        ? "border-main bg-main/5 shadow-shadow" 
+                        : "border-border hover:translate-x-1 hover:translate-y-1"
+                    }`}
                   >
                     <input
                       type="radio"
@@ -141,13 +147,16 @@ export default function CheckoutPage() {
                       value="card"
                       checked={paymentMethod === "card"}
                       onChange={(e) => setPaymentMethod(e.target.value as "card" | "paypal")}
-                      className="w-4 h-4"
+                      className="w-5 h-5"
                     />
-                    <span className="ml-3 font-medium">Credit/Debit Card</span>
+                    <span className="ml-3 font-heading">Credit/Debit Card</span>
                   </label>
                   <label
-                    className="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-primary/50"
-                    style={{ borderColor: paymentMethod === "paypal" ? "var(--color-primary)" : "var(--color-border)" }}
+                    className={`flex items-center p-4 border-2 rounded-base cursor-pointer transition-all ${
+                      paymentMethod === "paypal" 
+                        ? "border-main bg-main/5 shadow-shadow" 
+                        : "border-border hover:translate-x-1 hover:translate-y-1"
+                    }`}
                   >
                     <input
                       type="radio"
@@ -155,45 +164,43 @@ export default function CheckoutPage() {
                       value="paypal"
                       checked={paymentMethod === "paypal"}
                       onChange={(e) => setPaymentMethod(e.target.value as "card" | "paypal")}
-                      className="w-4 h-4"
+                      className="w-5 h-5"
                     />
-                    <span className="ml-3 font-medium">PayPal</span>
+                    <span className="ml-3 font-heading">PayPal</span>
                   </label>
                 </div>
               </div>
 
               {/* Card Payment Form */}
               {paymentMethod === "card" && (
-                <form onSubmit={handlePayment} className="space-y-6">
+                <form onSubmit={handlePayment} className="space-y-5">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Email Address</label>
-                    <Input
+                    <NLabel className="mb-2">Email Address</NLabel>
+                    <NInput
                       type="email"
                       name="email"
                       placeholder="you@example.com"
                       value={formData.email}
                       onChange={handleInputChange}
                       required
-                      className="bg-background"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Cardholder Name</label>
-                    <Input
+                    <NLabel className="mb-2">Cardholder Name</NLabel>
+                    <NInput
                       type="text"
                       name="cardName"
                       placeholder="John Doe"
                       value={formData.cardName}
                       onChange={handleInputChange}
                       required
-                      className="bg-background"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Card Number</label>
-                    <Input
+                    <NLabel className="mb-2">Card Number</NLabel>
+                    <NInput
                       type="text"
                       name="cardNumber"
                       placeholder="4242 4242 4242 4242"
@@ -201,14 +208,13 @@ export default function CheckoutPage() {
                       onChange={handleInputChange}
                       maxLength={19}
                       required
-                      className="bg-background"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Expiry Date</label>
-                      <Input
+                      <NLabel className="mb-2">Expiry Date</NLabel>
+                      <NInput
                         type="text"
                         name="expiryDate"
                         placeholder="MM/YY"
@@ -216,12 +222,11 @@ export default function CheckoutPage() {
                         onChange={handleInputChange}
                         maxLength={5}
                         required
-                        className="bg-background"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">CVV</label>
-                      <Input
+                      <NLabel className="mb-2">CVV</NLabel>
+                      <NInput
                         type="text"
                         name="cvv"
                         placeholder="123"
@@ -229,86 +234,95 @@ export default function CheckoutPage() {
                         onChange={handleInputChange}
                         maxLength={3}
                         required
-                        className="bg-background"
                       />
                     </div>
                   </div>
 
-                  <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex gap-3">
-                    <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
-                      This is a demo checkout. Use test card 4242 4242 4242 4242 for testing.
-                    </p>
-                  </div>
+                  <NCard className="p-5 bg-accent/10 border-accent/30">
+                    <div className="flex gap-3">
+                      <AlertCircle className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-foreground font-base">
+                        This is a demo checkout. Use test card 4242 4242 4242 4242 for testing.
+                      </p>
+                    </div>
+                  </NCard>
 
-                  <Button
+                  <NButton
                     type="submit"
                     disabled={isProcessing}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 text-base"
+                    variant="default"
+                    className="w-full"
+                    size="lg"
                   >
                     {isProcessing ? "Processing..." : `Pay $${courseData.price}`}
-                  </Button>
+                  </NButton>
                 </form>
               )}
 
               {/* PayPal Payment */}
               {paymentMethod === "paypal" && (
-                <div className="space-y-6">
+                <div className="space-y-5">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Email Address</label>
-                    <Input type="email" placeholder="you@example.com" className="bg-background" />
+                    <NLabel className="mb-2">Email Address</NLabel>
+                    <NInput type="email" placeholder="you@example.com" />
                   </div>
-                  <Button
+                  <NButton
                     onClick={handlePayment}
                     disabled={isProcessing}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-base"
+                    variant="accent"
+                    className="w-full"
+                    size="lg"
                   >
                     {isProcessing ? "Processing..." : "Pay with PayPal"}
-                  </Button>
+                  </NButton>
                 </div>
               )}
-            </Card>
+            </NCard>
           </div>
 
           {/* Order Summary */}
           <div>
-            <Card className="p-6 sticky top-6">
-              <h2 className="text-lg font-semibold mb-6">Order Summary</h2>
+            <NCard className="p-6 sticky top-32">
+              <h2 className="text-xl font-heading mb-6">Order Summary</h2>
 
               <div className="mb-6">
-                <img
-                  src={courseData.image || "/placeholder.svg"}
-                  alt={courseData.title}
-                  className="w-full h-40 object-cover rounded-lg mb-4"
-                />
-                <h3 className="font-semibold text-lg mb-1">{courseData.title}</h3>
-                <p className="text-sm text-muted-foreground mb-4">{courseData.instructor}</p>
-                <p className="text-sm text-muted-foreground">{courseData.description}</p>
+                <div className="w-full h-48 bg-main/10 rounded-base border-2 border-border overflow-hidden mb-4">
+                  <img
+                    src={courseData.image || "/placeholder.svg"}
+                    alt={courseData.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <h3 className="font-heading text-xl mb-1">{courseData.title}</h3>
+                <p className="text-sm text-foreground/70 mb-3 font-base">{courseData.instructor}</p>
+                <p className="text-sm text-foreground/70 font-base">{courseData.description}</p>
               </div>
 
-              <div className="border-t border-border pt-4 space-y-3 mb-6">
-                <div className="flex justify-between text-sm">
-                  <span>Course Price</span>
-                  <span className="font-medium">${courseData.price}</span>
+              <div className="border-t-2 border-border pt-5 space-y-3 mb-6">
+                <div className="flex justify-between text-sm font-base">
+                  <span className="text-foreground/70">Course Price</span>
+                  <span className="font-heading">${courseData.price}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>Tax (0%)</span>
-                  <span className="font-medium">$0.00</span>
+                <div className="flex justify-between text-sm font-base">
+                  <span className="text-foreground/70">Tax (0%)</span>
+                  <span className="font-heading">$0.00</span>
                 </div>
-                <div className="border-t border-border pt-3 flex justify-between">
-                  <span className="font-semibold">Total</span>
-                  <span className="text-xl font-bold text-primary">${courseData.price}</span>
+                <div className="border-t-2 border-border pt-3 flex justify-between">
+                  <span className="font-heading text-lg">Total</span>
+                  <span className="text-2xl font-heading text-main">${courseData.price}</span>
                 </div>
               </div>
 
-              <div className="bg-accent/10 rounded-lg p-4 flex items-start gap-3">
-                <Lock className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-accent mb-1">Secure Payment</p>
-                  <p className="text-muted-foreground">Your payment information is encrypted and secure.</p>
+              <NCard className="p-5 bg-success/10 border-success/30">
+                <div className="flex items-start gap-3">
+                  <Lock className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-heading text-success mb-1">Secure Payment</p>
+                    <p className="text-foreground/70 font-base">Your payment information is encrypted and secure.</p>
+                  </div>
                 </div>
-              </div>
-            </Card>
+              </NCard>
+            </NCard>
           </div>
         </div>
       </main>

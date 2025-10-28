@@ -10,13 +10,20 @@ import RadialOrbitalTimeline from "@/components/ui/radial-orbital-timeline"
 import OrbitingSkills from "@/components/ui/orbiting-skills"
 import { ContainerAnimated, ContainerStagger, GalleryGrid, GalleryGridCell } from "@/components/ui/cta-section-with-gallery"
 import { StackedCircularFooter } from "@/components/ui/stacked-circular-footer"
-import { ArrowRight, BookOpen, Brain, Calendar, Users, Zap, CheckCircle2, Star, Home, GraduationCap, DollarSign, Target, TrendingUp, Upload, DollarSignIcon, BarChart3, MessageSquare, Sparkles } from "lucide-react"
+import { ArrowRight, BookOpen, Brain, Calendar, Users, Zap, CheckCircle2, Star, Home, GraduationCap, DollarSign, Target, TrendingUp, Upload, DollarSignIcon, BarChart3, MessageSquare, Sparkles, LogOut, LayoutDashboard, User as UserIcon } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/utils/supabase/client"
 
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState("home")
   const [isScrolling, setIsScrolling] = useState(false)
   const scrollTimeout = useRef<NodeJS.Timeout>()
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -65,6 +72,53 @@ export default function LandingPage() {
       if (scrollTimeout.current) clearTimeout(scrollTimeout.current)
     }
   }, [isScrolling])
+
+  // Fetch user data and handle auth state changes
+  useEffect(() => {
+    const supabase = createClient()
+    
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+      
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        setProfile(profile)
+      }
+    }
+    
+    fetchUser()
+
+    // Listen for auth changes (including sign out)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data }) => setProfile(data))
+      } else {
+        setProfile(null)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Handle sign out
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    setShowUserMenu(false)
+    // State will update automatically via onAuthStateChange
+    router.refresh()
+  }
 
   const handleNavClick = (sectionId: string, e?: React.MouseEvent<HTMLAnchorElement>) => {
     if (e) e.preventDefault()
@@ -136,14 +190,64 @@ export default function LandingPage() {
           />
           
           {/* Auth Buttons - Right in rounded container */}
-          <div className="flex items-center gap-2 bg-white/10 border border-white/20 backdrop-blur-lg py-2 px-4 rounded-full shadow-lg shadow-black/20">
-            <Button variant="ghost" className="hidden sm:inline-flex text-white/80 hover:text-white hover:bg-white/10 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-300">
-              Log In
-            </Button>
-            <Button className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold rounded-full px-5 py-2 text-sm shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300">
-              Get Started
-            </Button>
-          </div>
+          {user ? (
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center gap-3 bg-white/10 border border-white/20 backdrop-blur-lg py-2 px-4 rounded-full shadow-lg shadow-black/20 hover:bg-white/15 transition-all duration-300"
+              >
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-white font-semibold text-sm">
+                  {profile?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+                <span className="hidden sm:inline text-white text-sm font-medium">
+                  {profile?.full_name?.split(' ')[0] || 'User'}
+                </span>
+              </button>
+              
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-56 bg-white border-2 border-border rounded-base shadow-shadow overflow-hidden z-50">
+                  <div className="p-3 border-b-2 border-border">
+                    <p className="font-heading text-sm font-semibold">{profile?.full_name || 'User'}</p>
+                    <p className="text-xs text-foreground/70 truncate">{user.email}</p>
+                    {profile?.role && (
+                      <div className="mt-2">
+                        <span className="inline-block px-2 py-1 text-xs font-heading bg-main/10 text-main border border-main/20 rounded-base capitalize">
+                          {profile.role}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <Link
+                    href={profile?.role === 'educator' ? '/educator/dashboard' : '/learner/dashboard'}
+                    className="flex items-center gap-2 px-3 py-2 hover:bg-secondary-background transition-colors"
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span className="text-sm font-base">Dashboard</span>
+                  </Link>
+                  <button
+                    onClick={handleSignOut}
+                    className="flex items-center gap-2 px-3 py-2 w-full text-left hover:bg-secondary-background transition-colors border-t-2 border-border"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span className="text-sm font-base">Sign Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 bg-white/10 border border-white/20 backdrop-blur-lg py-2 px-4 rounded-full shadow-lg shadow-black/20">
+              <Link href="/auth">
+                <Button variant="ghost" className="hidden sm:inline-flex text-white/80 hover:text-white hover:bg-white/10 rounded-full px-5 py-2 text-sm font-semibold transition-all duration-300">
+                  Log In
+                </Button>
+              </Link>
+              <Link href="/auth">
+                <Button className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold rounded-full px-5 py-2 text-sm shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all duration-300">
+                  Get Started
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       </nav>
 
@@ -160,12 +264,24 @@ export default function LandingPage() {
             DigiGyan combines world-class courses with AI-powered task planning
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pointer-events-auto">
-            <Button size="lg" className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white text-base font-semibold shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-300">
-              Start Learning Free <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-            <Button size="lg" variant="outline" className="text-base border-white/30 bg-white/5 text-white hover:bg-white/10 hover:border-white/50 backdrop-blur-sm transition-all duration-300">
-              Explore Courses
-            </Button>
+            {user ? (
+              <Link href={profile?.role === 'educator' ? '/educator/dashboard' : '/learner/dashboard'}>
+                <Button size="lg" className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white text-base font-semibold shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-300">
+                  Go to Dashboard <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link href="/auth">
+                  <Button size="lg" className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white text-base font-semibold shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-300">
+                    Start Learning Free <ArrowRight className="ml-2 w-5 h-5" />
+                  </Button>
+                </Link>
+                <Button size="lg" variant="outline" className="text-base border-white/30 bg-white/5 text-white hover:bg-white/10 hover:border-white/50 backdrop-blur-sm transition-all duration-300">
+                  Explore Courses
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -294,9 +410,11 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <Button size="lg" className="bg-cyan-500 hover:bg-cyan-600 text-white mt-6">
-                Start Teaching <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
+              <Link href={user && profile?.role === 'educator' ? '/educator/dashboard' : '/auth'}>
+                <Button size="lg" className="bg-cyan-500 hover:bg-cyan-600 text-white mt-6">
+                  {user && profile?.role === 'educator' ? 'Go to Dashboard' : 'Start Teaching'} <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
             </div>
 
             {/* Right: Radial Timeline */}
@@ -419,9 +537,11 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <Button size="lg" className="bg-purple-500 hover:bg-purple-600 text-white mt-6">
-                Start Learning <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
+              <Link href={user ? (profile?.role === 'learner' ? '/learner/dashboard' : '/auth') : '/auth'}>
+                <Button size="lg" className="bg-purple-500 hover:bg-purple-600 text-white mt-6">
+                  {user && profile?.role === 'learner' ? 'Go to Dashboard' : 'Start Learning'} <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
             </div>
 
             {/* Right: Orbiting Skills */}
@@ -448,12 +568,24 @@ export default function LandingPage() {
               Start learning today with AI-powered planning, expert courses, and a supportive community.
             </ContainerAnimated>
             <ContainerAnimated className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-300">
-                Get Started Free <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-              <Button size="lg" variant="outline" className="border-white/30 bg-white/5 text-white hover:bg-white/10 hover:border-white/50 backdrop-blur-sm transition-all duration-300">
-                Schedule Demo
-              </Button>
+              {user ? (
+                <Link href={profile?.role === 'educator' ? '/educator/dashboard' : '/learner/dashboard'}>
+                  <Button size="lg" className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-300">
+                    Go to Dashboard <ArrowRight className="ml-2 w-5 h-5" />
+                  </Button>
+                </Link>
+              ) : (
+                <>
+                  <Link href="/auth">
+                    <Button size="lg" className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-300">
+                      Get Started Free <ArrowRight className="ml-2 w-5 h-5" />
+                    </Button>
+                  </Link>
+                  <Button size="lg" variant="outline" className="border-white/30 bg-white/5 text-white hover:bg-white/10 hover:border-white/50 backdrop-blur-sm transition-all duration-300">
+                    Schedule Demo
+                  </Button>
+                </>
+              )}
             </ContainerAnimated>
           </ContainerStagger>
 

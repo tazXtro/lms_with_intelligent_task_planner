@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { NButton } from "@/components/ui/nbutton"
+import { NCard } from "@/components/ui/ncard"
+import { NInput } from "@/components/ui/ninput"
 import { Progress } from "@/components/ui/progress"
-import { Search, BookOpen, Star, Filter } from "lucide-react"
+import { Search, BookOpen, Star, Filter, Brain } from "lucide-react"
 import Link from "next/link"
 
 const allCourses = [
@@ -107,27 +107,27 @@ export default function CoursesPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="hidden md:block fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border">
-        <div className="p-6 border-b border-sidebar-border">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-primary-foreground" />
+      <aside className="hidden md:block fixed left-0 top-0 h-screen w-64 bg-secondary-background border-r-4 border-border">
+        <div className="p-6 border-b-2 border-border">
+          <Link href="/" className="flex items-center gap-3 hover:-translate-y-1 transition-transform">
+            <div className="w-10 h-10 bg-main border-2 border-border rounded-base flex items-center justify-center shadow-shadow">
+              <Brain className="w-6 h-6 text-main-foreground" />
             </div>
-            <span className="font-bold text-lg">DigiGyan</span>
+            <span className="font-heading text-xl">DigiGyan</span>
           </Link>
         </div>
 
         <nav className="p-4 space-y-2">
           <Link
             href="/learner/dashboard"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent/10 transition-colors"
+            className="flex items-center gap-3 px-4 py-3 rounded-base text-foreground hover:bg-main/5 transition-colors font-base"
           >
             <BookOpen className="w-5 h-5" />
             Dashboard
           </Link>
           <Link
             href="/learner/courses"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary font-medium"
+            className="flex items-center gap-3 px-4 py-3 rounded-base bg-main/10 border-2 border-border text-foreground font-heading"
           >
             <BookOpen className="w-5 h-5" />
             My Courses
@@ -137,28 +137,28 @@ export default function CoursesPage() {
 
       {/* Main Content */}
       <div className="md:ml-64">
-        <header className="sticky top-0 z-30 bg-background border-b border-border">
-          <div className="px-6 py-4">
-            <h1 className="text-2xl font-bold mb-4">Explore Courses</h1>
+        <header className="sticky top-0 z-30 bg-background border-b-4 border-border">
+          <div className="px-6 py-5">
+            <h1 className="text-3xl font-heading mb-5">Explore Courses</h1>
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
-                <Input
+                <Search className="absolute left-3 top-3 w-5 h-5 text-foreground/50 pointer-events-none" />
+                <NInput
                   placeholder="Search courses..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-background"
+                  className="pl-10"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 {(["all", "enrolled", "available"] as const).map((filter) => (
                   <button
                     key={filter}
                     onClick={() => setFilterEnrolled(filter)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+                    className={`px-4 py-2 rounded-base font-heading border-2 border-border transition-all whitespace-nowrap ${
                       filterEnrolled === filter
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        ? "bg-main text-main-foreground shadow-shadow"
+                        : "bg-secondary-background text-foreground hover:translate-x-1 hover:translate-y-1"
                     }`}
                   >
                     {filter.charAt(0).toUpperCase() + filter.slice(1)}
@@ -173,18 +173,18 @@ export default function CoursesPage() {
           <div className="grid md:grid-cols-4 gap-6">
             {/* Sidebar Filters */}
             <div className="hidden md:block">
-              <Card className="p-4 sticky top-24">
-                <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <Filter className="w-4 h-4" />
+              <NCard className="p-4 sticky top-32">
+                <h3 className="font-heading text-lg mb-4 flex items-center gap-2">
+                  <Filter className="w-5 h-5" />
                   Categories
                 </h3>
                 <div className="space-y-2">
                   <button
                     onClick={() => setSelectedCategory(null)}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                    className={`w-full text-left px-3 py-2 rounded-base transition-all border-2 ${
                       !selectedCategory
-                        ? "bg-primary/10 text-primary font-medium"
-                        : "text-muted-foreground hover:bg-muted"
+                        ? "bg-main/10 text-foreground font-heading border-border"
+                        : "text-foreground/70 hover:bg-main/5 border-transparent font-base"
                     }`}
                   >
                     All Categories
@@ -193,28 +193,28 @@ export default function CoursesPage() {
                     <button
                       key={category}
                       onClick={() => setSelectedCategory(category)}
-                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                      className={`w-full text-left px-3 py-2 rounded-base transition-all border-2 ${
                         selectedCategory === category
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "text-muted-foreground hover:bg-muted"
+                          ? "bg-main/10 text-foreground font-heading border-border"
+                          : "text-foreground/70 hover:bg-main/5 border-transparent font-base"
                       }`}
                     >
                       {category}
                     </button>
                   ))}
                 </div>
-              </Card>
+              </NCard>
             </div>
 
             {/* Courses Grid */}
             <div className="md:col-span-3">
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredCourses.map((course) => (
-                  <Card
+                  <NCard
                     key={course.id}
-                    className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer"
+                    className="overflow-hidden hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all group cursor-pointer"
                   >
-                    <div className="relative h-40 bg-gradient-to-br from-primary/20 to-accent/20 overflow-hidden">
+                    <div className="relative h-48 bg-main/10 overflow-hidden border-b-2 border-border">
                       <img
                         src={course.image || "/placeholder.svg"}
                         alt={course.title}
@@ -222,33 +222,33 @@ export default function CoursesPage() {
                       />
                       {course.enrolled && (
                         <div className="absolute top-3 right-3">
-                          <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-accent/90 text-accent-foreground">
+                          <span className="inline-block px-3 py-1 rounded-base text-xs font-heading bg-accent text-main-foreground border-2 border-border shadow-shadow">
                             Enrolled
                           </span>
                         </div>
                       )}
                     </div>
 
-                    <div className="p-4">
+                    <div className="p-5">
                       <div className="mb-2">
-                        <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded">
+                        <span className="text-xs font-heading text-main bg-main/10 px-3 py-1 rounded-base border-2 border-border">
                           {course.category}
                         </span>
                       </div>
-                      <h3 className="font-semibold text-lg mb-1 line-clamp-2">{course.title}</h3>
-                      <p className="text-sm text-muted-foreground mb-4">{course.instructor}</p>
+                      <h3 className="font-heading text-xl mb-1 line-clamp-2">{course.title}</h3>
+                      <p className="text-sm text-foreground/70 mb-4 font-base">{course.instructor}</p>
 
                       {course.enrolled && (
-                        <div className="mb-4">
+                        <div className="mb-4 p-3 bg-main/5 rounded-base border-2 border-border">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium">Progress</span>
-                            <span className="text-xs font-medium text-primary">{course.progress}%</span>
+                            <span className="text-xs font-heading">Progress</span>
+                            <span className="text-xs font-heading text-main">{course.progress}%</span>
                           </div>
                           <Progress value={course.progress} className="h-2" />
                         </div>
                       )}
 
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
+                      <div className="flex items-center justify-between text-xs text-foreground/70 mb-4 font-base p-3 bg-accent/5 rounded-base border-2 border-border">
                         <span>
                           {course.enrolled
                             ? `${course.completed}/${course.lessons} lessons`
@@ -260,24 +260,23 @@ export default function CoursesPage() {
                         </span>
                       </div>
 
-                      <Button
-                        className={`w-full ${
-                          course.enrolled
-                            ? "bg-primary hover:bg-primary/90 text-primary-foreground"
-                            : "bg-accent hover:bg-accent/90 text-accent-foreground"
-                        }`}
+                      <NButton
+                        className="w-full"
+                        variant={course.enrolled ? "default" : "accent"}
                       >
                         {course.enrolled ? "Continue" : "Enroll Now"}
-                      </Button>
+                      </NButton>
                     </div>
-                  </Card>
+                  </NCard>
                 ))}
               </div>
 
               {filteredCourses.length === 0 && (
-                <div className="text-center py-12">
-                  <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                  <p className="text-muted-foreground">No courses found</p>
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 bg-main/10 border-2 border-border rounded-base flex items-center justify-center mx-auto mb-4">
+                    <BookOpen className="w-10 h-10 text-foreground/50" />
+                  </div>
+                  <p className="text-foreground/70 font-base text-lg">No courses found</p>
                 </div>
               )}
             </div>

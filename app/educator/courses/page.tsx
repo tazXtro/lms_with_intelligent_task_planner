@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Plus, Search, BookOpen, Edit, Eye } from "lucide-react"
+import { NButton } from "@/components/ui/nbutton"
+import { NCard } from "@/components/ui/ncard"
+import { NInput } from "@/components/ui/ninput"
+import { Plus, Search, BookOpen, Edit, Eye, Brain } from "lucide-react"
 import Link from "next/link"
 
 const allCourses = [
@@ -63,27 +63,27 @@ export default function CoursesPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="hidden md:block fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border">
-        <div className="p-6 border-b border-sidebar-border">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-primary-foreground" />
+      <aside className="hidden md:block fixed left-0 top-0 h-screen w-64 bg-secondary-background border-r-4 border-border">
+        <div className="p-6 border-b-2 border-border">
+          <Link href="/" className="flex items-center gap-3 hover:-translate-y-1 transition-transform">
+            <div className="w-10 h-10 bg-main border-2 border-border rounded-base flex items-center justify-center shadow-shadow">
+              <Brain className="w-6 h-6 text-main-foreground" />
             </div>
-            <span className="font-bold text-lg">DigiGyan</span>
+            <span className="font-heading text-xl">DigiGyan</span>
           </Link>
         </div>
 
         <nav className="p-4 space-y-2">
           <Link
             href="/educator/dashboard"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent/10 transition-colors"
+            className="flex items-center gap-3 px-4 py-3 rounded-base text-foreground hover:bg-main/5 transition-colors font-base"
           >
             <BookOpen className="w-5 h-5" />
             Dashboard
           </Link>
           <Link
             href="/educator/courses"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary font-medium"
+            className="flex items-center gap-3 px-4 py-3 rounded-base bg-main/10 border-2 border-border text-foreground font-heading"
           >
             <BookOpen className="w-5 h-5" />
             My Courses
@@ -93,13 +93,13 @@ export default function CoursesPage() {
 
       {/* Main Content */}
       <div className="md:ml-64">
-        <header className="sticky top-0 z-30 bg-background border-b border-border">
-          <div className="px-6 py-4 flex items-center justify-between">
-            <h1 className="text-2xl font-bold">My Courses</h1>
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              <Plus className="w-4 h-4 mr-2" />
+        <header className="sticky top-0 z-30 bg-background border-b-4 border-border">
+          <div className="px-6 py-5 flex items-center justify-between">
+            <h1 className="text-3xl font-heading">My Courses</h1>
+            <NButton variant="default" size="lg">
+              <Plus className="w-5 h-5 mr-2" />
               Create Course
-            </Button>
+            </NButton>
           </div>
         </header>
 
@@ -108,23 +108,23 @@ export default function CoursesPage() {
           <div className="mb-8 space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
-                <Input
+                <Search className="absolute left-3 top-3 w-5 h-5 text-foreground/50 pointer-events-none" />
+                <NInput
                   placeholder="Search courses..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-background"
+                  className="pl-10"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 {(["all", "published", "draft"] as const).map((status) => (
                   <button
                     key={status}
                     onClick={() => setFilterStatus(status)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    className={`px-5 py-2 rounded-base font-heading border-2 border-border transition-all ${
                       filterStatus === status
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        ? "bg-main text-main-foreground shadow-shadow"
+                        : "bg-secondary-background text-foreground hover:translate-x-1 hover:translate-y-1"
                     }`}
                   >
                     {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -137,8 +137,8 @@ export default function CoursesPage() {
           {/* Courses Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCourses.map((course) => (
-              <Card key={course.id} className="overflow-hidden hover:shadow-lg transition-shadow group cursor-pointer">
-                <div className="relative h-40 bg-gradient-to-br from-primary/20 to-accent/20 overflow-hidden">
+              <NCard key={course.id} className="overflow-hidden hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all group cursor-pointer">
+                <div className="relative h-48 bg-main/10 overflow-hidden border-b-2 border-border">
                   <img
                     src={course.image || "/placeholder.svg"}
                     alt={course.title}
@@ -146,10 +146,10 @@ export default function CoursesPage() {
                   />
                   <div className="absolute top-3 right-3">
                     <span
-                      className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                      className={`inline-block px-3 py-1 rounded-base text-xs font-heading border-2 border-border ${
                         course.status === "Published"
-                          ? "bg-accent/90 text-accent-foreground"
-                          : "bg-muted text-muted-foreground"
+                          ? "bg-success text-main-foreground shadow-shadow"
+                          : "bg-foreground/10 text-foreground"
                       }`}
                     >
                       {course.status}
@@ -157,44 +157,46 @@ export default function CoursesPage() {
                   </div>
                 </div>
 
-                <div className="p-4">
-                  <h3 className="font-semibold text-lg mb-2 line-clamp-2">{course.title}</h3>
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{course.description}</p>
+                <div className="p-5">
+                  <h3 className="font-heading text-xl mb-2 line-clamp-2">{course.title}</h3>
+                  <p className="text-sm text-foreground/70 mb-4 line-clamp-2 font-base">{course.description}</p>
 
-                  <div className="grid grid-cols-3 gap-2 mb-4 text-center">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Students</p>
-                      <p className="font-semibold">{course.students}</p>
+                  <div className="grid grid-cols-3 gap-3 mb-5 text-center">
+                    <div className="p-3 bg-main/5 rounded-base border-2 border-border">
+                      <p className="text-xs text-foreground/70 font-base">Students</p>
+                      <p className="font-heading text-lg">{course.students}</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Revenue</p>
-                      <p className="font-semibold">${(course.revenue / 1000).toFixed(1)}k</p>
+                    <div className="p-3 bg-accent/5 rounded-base border-2 border-border">
+                      <p className="text-xs text-foreground/70 font-base">Revenue</p>
+                      <p className="font-heading text-lg">${(course.revenue / 1000).toFixed(1)}k</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Rating</p>
-                      <p className="font-semibold">{course.rating || "N/A"}</p>
+                    <div className="p-3 bg-success/5 rounded-base border-2 border-border">
+                      <p className="text-xs text-foreground/70 font-base">Rating</p>
+                      <p className="font-heading text-lg">{course.rating || "N/A"}</p>
                     </div>
                   </div>
 
                   <div className="flex gap-2">
-                    <button className="flex-1 px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors text-sm font-medium flex items-center justify-center gap-2">
-                      <Eye className="w-4 h-4" />
+                    <NButton variant="neutral" className="flex-1">
+                      <Eye className="w-4 h-4 mr-1" />
                       View
-                    </button>
-                    <button className="flex-1 px-3 py-2 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors text-sm font-medium flex items-center justify-center gap-2">
-                      <Edit className="w-4 h-4" />
+                    </NButton>
+                    <NButton variant="default" className="flex-1">
+                      <Edit className="w-4 h-4 mr-1" />
                       Edit
-                    </button>
+                    </NButton>
                   </div>
                 </div>
-              </Card>
+              </NCard>
             ))}
           </div>
 
           {filteredCourses.length === 0 && (
-            <div className="text-center py-12">
-              <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-              <p className="text-muted-foreground">No courses found</p>
+            <div className="text-center py-16">
+              <div className="w-20 h-20 bg-main/10 border-2 border-border rounded-base flex items-center justify-center mx-auto mb-4">
+                <BookOpen className="w-10 h-10 text-foreground/50" />
+              </div>
+              <p className="text-foreground/70 font-base text-lg">No courses found</p>
             </div>
           )}
         </main>
