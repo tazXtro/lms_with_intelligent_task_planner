@@ -1,108 +1,170 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { NButton } from "@/components/ui/nbutton"
 import { NCard } from "@/components/ui/ncard"
 import { NInput } from "@/components/ui/ninput"
 import { Progress } from "@/components/ui/progress"
-import { Search, BookOpen, Star, Filter, Brain } from "lucide-react"
+import { Search, BookOpen, Star, Filter, Brain, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { createClient } from "@/utils/supabase/client"
+import type { Course } from "@/types/database.types"
 
-const allCourses = [
-  {
-    id: 1,
-    title: "Advanced React Patterns",
-    instructor: "Sarah Chen",
-    category: "Web Development",
-    progress: 65,
-    lessons: 24,
-    completed: 16,
-    rating: 4.8,
-    students: 1240,
-    image: "/react-course.jpg",
-    enrolled: true,
-  },
-  {
-    id: 2,
-    title: "Python for Data Science",
-    instructor: "Dr. James Wilson",
-    category: "Data Science",
-    progress: 42,
-    lessons: 32,
-    completed: 13,
-    rating: 4.6,
-    students: 890,
-    image: "/python-data-science.jpg",
-    enrolled: true,
-  },
-  {
-    id: 3,
-    title: "UI/UX Design Masterclass",
-    instructor: "Emma Rodriguez",
-    category: "Design",
-    progress: 88,
-    lessons: 20,
-    completed: 18,
-    rating: 4.9,
-    students: 650,
-    image: "/ui-ux-design-concept.png",
-    enrolled: true,
-  },
-  {
-    id: 4,
-    title: "Mobile App Development",
-    instructor: "Alex Kumar",
-    category: "Mobile",
-    progress: 0,
-    lessons: 28,
-    completed: 0,
-    rating: 4.7,
-    students: 2500,
-    image: "/mobile-development.jpg",
-    enrolled: false,
-  },
-  {
-    id: 5,
-    title: "Web Design Fundamentals",
-    instructor: "Lisa Anderson",
-    category: "Web Development",
-    progress: 0,
-    lessons: 18,
-    completed: 0,
-    rating: 4.8,
-    students: 3200,
-    image: "/web-design.jpg",
-    enrolled: false,
-  },
-  {
-    id: 6,
-    title: "JavaScript Advanced Concepts",
-    instructor: "Mark Thompson",
-    category: "Web Development",
-    progress: 0,
-    lessons: 25,
-    completed: 0,
-    rating: 4.6,
-    students: 1800,
-    image: "/javascript-advanced.jpg",
-    enrolled: false,
-  },
-]
+interface EnrichedCourse extends Course {
+  instructor: string
+  enrolled: boolean
+  progress: number
+  totalLessons: number
+  completedLessons: number
+  enrollmentId?: string
+}
 
 export default function CoursesPage() {
+  const router = useRouter()
+  const supabase = createClient()
+  
   const [searchQuery, setSearchQuery] = useState("")
-  const [filterEnrolled, setFilterEnrolled] = useState<"all" | "enrolled" | "available">("all")
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [enrolledCourses, setEnrolledCourses] = useState<EnrichedCourse[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const categories = Array.from(new Set(allCourses.map((c) => c.category)))
+  useEffect(() => {
+    loadCourses()
+  }, [])
 
-  const filteredCourses = allCourses.filter((course) => {
+  const loadCourses = async () => {
+    try {
+      setLoading(true)
+
+      // Get current user
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
+
+      if (authError) {
+        console.error("Auth error:", authError)
+        throw authError
+      }
+
+      if (!user) {
+        router.push("/auth")
+        return
+      }
+
+      // Fetch ONLY enrolled courses for this user
+      const { data: enrollmentsData, error: enrollmentsError } = await supabase
+        .from("enrollments")
+        .select("*, course:courses!enrollments_course_id_fkey(*)")
+        .eq("learner_id", user.id)
+        .order("enrolled_at", { ascending: false })
+
+      if (enrollmentsError) {
+        console.error("Enrollments fetch error:", enrollmentsError)
+        throw enrollmentsError
+      }
+
+      if (!enrollmentsData || enrollmentsData.length === 0) {
+        setEnrolledCourses([])
+        return
+      }
+
+      // Get all educator profiles in one query
+      const educatorIds = [...new Set(enrollmentsData.map((e) => e.course.educator_id))]
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", educatorIds)
+
+      const profilesMap = new Map(profiles?.map((p) => [p.id, p]) || [])
+
+      // Enrich enrolled courses with additional data
+      const enrichedCourses = await Promise.all(
+        enrollmentsData.map(async (enrollment) => {
+          try {
+            const course = enrollment.course
+            
+            // Get educator info from map
+            const educator = profilesMap.get(course.educator_id)
+
+            // Get total lessons count
+            const { data: sectionsData } = await supabase
+              .from("course_sections")
+              .select("id")
+              .eq("course_id", course.id)
+
+            const sectionIds = (sectionsData || []).map((s) => s.id)
+            
+            let totalLessons = 0
+            if (sectionIds.length > 0) {
+              const { count: lessonsCount } = await supabase
+                .from("course_lessons")
+                .select("*", { count: "exact", head: true })
+                .in("section_id", sectionIds)
+              
+              totalLessons = lessonsCount || 0
+            }
+
+            // Get completed lessons count
+            const { data: progressData } = await supabase
+              .from("lesson_progress")
+              .select("id")
+              .eq("enrollment_id", enrollment.id)
+              .eq("completed", true)
+            
+            const completedLessons = progressData?.length || 0
+
+            return {
+              ...course,
+              instructor: educator?.full_name || "Unknown Instructor",
+              enrolled: true, // Always true for this page
+              progress: enrollment.progress || 0,
+              totalLessons,
+              completedLessons,
+              enrollmentId: enrollment.id,
+            }
+          } catch (courseErr) {
+            console.error(`Error enriching course ${enrollment.course.id}:`, courseErr)
+            // Return minimal course data if enrichment fails
+            return {
+              ...enrollment.course,
+              instructor: "Unknown Instructor",
+              enrolled: true,
+              progress: enrollment.progress || 0,
+              totalLessons: 0,
+              completedLessons: 0,
+              enrollmentId: enrollment.id,
+            }
+          }
+        })
+      )
+
+      setEnrolledCourses(enrichedCourses)
+    } catch (err: any) {
+      console.error("Error loading courses:", err)
+      console.error("Error details:", {
+        message: err?.message,
+        code: err?.code,
+        details: err?.details,
+        hint: err?.hint,
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const categories = Array.from(new Set(enrolledCourses.map((c) => c.category).filter(Boolean)))
+
+  const filteredCourses = enrolledCourses.filter((course) => {
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesEnrolled =
-      filterEnrolled === "all" || (filterEnrolled === "enrolled" ? course.enrolled : !course.enrolled)
     const matchesCategory = !selectedCategory || course.category === selectedCategory
-    return matchesSearch && matchesEnrolled && matchesCategory
+    return matchesSearch && matchesCategory
   })
+
+  const handleCourseClick = (course: EnrichedCourse) => {
+    router.push(`/learner/learn/${course.id}`)
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -139,37 +201,38 @@ export default function CoursesPage() {
       <div className="md:ml-64">
         <header className="sticky top-0 z-30 bg-background border-b-4 border-border">
           <div className="px-6 py-5">
-            <h1 className="text-3xl font-heading mb-5">Explore Courses</h1>
+            <div className="flex items-center justify-between mb-5">
+              <h1 className="text-3xl font-heading">My Courses</h1>
+              <Link href="/learner/browse">
+                <NButton variant="accent">
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Browse All Courses
+                </NButton>
+              </Link>
+            </div>
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-3 w-5 h-5 text-foreground/50 pointer-events-none" />
                 <NInput
-                  placeholder="Search courses..."
+                  placeholder="Search your courses..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                 />
-              </div>
-              <div className="flex gap-3">
-                {(["all", "enrolled", "available"] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setFilterEnrolled(filter)}
-                    className={`px-4 py-2 rounded-base font-heading border-2 border-border transition-all whitespace-nowrap ${
-                      filterEnrolled === filter
-                        ? "bg-main text-main-foreground shadow-shadow"
-                        : "bg-secondary-background text-foreground hover:translate-x-1 hover:translate-y-1"
-                    }`}
-                  >
-                    {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                  </button>
-                ))}
               </div>
             </div>
           </div>
         </header>
 
         <main className="p-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="text-center">
+                <Loader2 className="w-12 h-12 animate-spin text-main mx-auto mb-4" />
+                <p className="font-heading text-lg">Loading courses...</p>
+              </div>
+            </div>
+          ) : (
           <div className="grid md:grid-cols-4 gap-6">
             {/* Sidebar Filters */}
             <div className="hidden md:block">
@@ -208,33 +271,59 @@ export default function CoursesPage() {
 
             {/* Courses Grid */}
             <div className="md:col-span-3">
+                {filteredCourses.length === 0 && !loading ? (
+                  <div className="text-center py-16">
+                    <div className="w-20 h-20 bg-main/10 border-2 border-border rounded-base flex items-center justify-center mx-auto mb-4">
+                      <BookOpen className="w-10 h-10 text-foreground/50" />
+                    </div>
+                    <p className="text-foreground/70 font-base text-lg mb-2">
+                      {searchQuery || selectedCategory ? "No courses found" : "You haven't enrolled in any courses yet"}
+                    </p>
+                    <p className="text-sm text-foreground/50 font-base mb-6">
+                      {searchQuery || selectedCategory 
+                        ? "Try adjusting your filters or search query"
+                        : "Start your learning journey by exploring our course catalog"}
+                    </p>
+                    {!searchQuery && !selectedCategory && (
+                      <Link href="/learner/browse">
+                        <NButton variant="default" size="lg">
+                          <BookOpen className="w-5 h-5 mr-2" />
+                          Browse Courses
+                        </NButton>
+                      </Link>
+                    )}
+                  </div>
+                ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredCourses.map((course) => (
                   <NCard
                     key={course.id}
+                        onClick={() => handleCourseClick(course)}
                     className="overflow-hidden hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all group cursor-pointer"
                   >
-                    <div className="relative h-48 bg-main/10 overflow-hidden border-b-2 border-border">
-                      <img
-                        src={course.image || "/placeholder.svg"}
-                        alt={course.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                      {course.enrolled && (
-                        <div className="absolute top-3 right-3">
-                          <span className="inline-block px-3 py-1 rounded-base text-xs font-heading bg-accent text-main-foreground border-2 border-border shadow-shadow">
-                            Enrolled
-                          </span>
+                        <div className="relative h-48 bg-main/10 overflow-hidden border-b-2 border-border">
+                          <img
+                            src={course.thumbnail_url || "/placeholder.svg"}
+                            alt={course.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                          {course.progress === 100 && (
+                            <div className="absolute top-3 right-3">
+                              <span className="inline-block px-3 py-1 rounded-base text-xs font-heading bg-success text-main-foreground border-2 border-border shadow-shadow">
+                                Completed
+                              </span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
 
                     <div className="p-5">
+                          {course.category && (
                       <div className="mb-2">
                         <span className="text-xs font-heading text-main bg-main/10 px-3 py-1 rounded-base border-2 border-border">
                           {course.category}
                         </span>
                       </div>
+                          )}
                       <h3 className="font-heading text-xl mb-1 line-clamp-2">{course.title}</h3>
                       <p className="text-sm text-foreground/70 mb-4 font-base">{course.instructor}</p>
 
@@ -251,36 +340,26 @@ export default function CoursesPage() {
                       <div className="flex items-center justify-between text-xs text-foreground/70 mb-4 font-base p-3 bg-accent/5 rounded-base border-2 border-border">
                         <span>
                           {course.enrolled
-                            ? `${course.completed}/${course.lessons} lessons`
-                            : `${course.lessons} lessons`}
+                                ? `${course.completedLessons}/${course.totalLessons} lessons`
+                                : `${course.totalLessons} lessons`}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Star className="w-3 h-3 fill-accent text-accent" />
-                          {course.rating}
-                        </span>
+                            <span className="text-foreground/70">${course.price}</span>
                       </div>
 
-                      <NButton
-                        className="w-full"
-                        variant={course.enrolled ? "default" : "accent"}
-                      >
-                        {course.enrolled ? "Continue" : "Enroll Now"}
-                      </NButton>
+                          <NButton
+                            className="w-full"
+                            variant="default"
+                          >
+                            {course.progress === 100 ? "Review Course" : course.progress > 0 ? "Continue Learning" : "Start Learning"}
+                          </NButton>
                     </div>
                   </NCard>
                 ))}
-              </div>
-
-              {filteredCourses.length === 0 && (
-                <div className="text-center py-16">
-                  <div className="w-20 h-20 bg-main/10 border-2 border-border rounded-base flex items-center justify-center mx-auto mb-4">
-                    <BookOpen className="w-10 h-10 text-foreground/50" />
-                  </div>
-                  <p className="text-foreground/70 font-base text-lg">No courses found</p>
                 </div>
               )}
             </div>
           </div>
+          )}
         </main>
       </div>
     </div>
