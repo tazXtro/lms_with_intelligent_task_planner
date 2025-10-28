@@ -9,6 +9,7 @@ import { NLabel } from "@/components/ui/nlabel"
 import { Textarea } from "@/components/ui/textarea"
 import { RichTextEditor } from "@/components/rich-text-editor"
 import { FileUpload } from "@/components/file-upload"
+import { AITeachingAssistant } from "@/components/ai-teaching-assistant"
 import { createClient } from "@/utils/supabase/client"
 import {
   ArrowLeft,
@@ -22,6 +23,7 @@ import {
   FileText,
   Save,
   Eye,
+  Sparkles,
 } from "lucide-react"
 import Link from "next/link"
 import type { Course, CourseSection, CourseLesson } from "@/types/database.types"
@@ -41,6 +43,10 @@ export default function CurriculumBuilderPage() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  // AI Assistant State
+  const [showAI, setShowAI] = useState(false)
+  const [aiMode, setAiMode] = useState<"course-outline" | "content-enhancer" | "assessment-generator" | "student-insights">("assessment-generator")
 
   // Section form state
   const [showSectionForm, setShowSectionForm] = useState(false)
@@ -284,6 +290,40 @@ export default function CurriculumBuilderPage() {
       console.error("Error deleting lesson:", err)
       alert("Failed to delete lesson")
     }
+  }
+
+  const handleEnhanceLessonContent = () => {
+    if (!lessonContent.trim()) {
+      alert("Please add some lesson content first")
+      return
+    }
+    
+    setAiMode("content-enhancer")
+    setShowAI(true)
+  }
+
+  const handleGenerateAssessment = () => {
+    if (!lessonContent.trim()) {
+      alert("Please add some lesson content first to generate questions")
+      return
+    }
+    
+    setAiMode("assessment-generator")
+    setShowAI(true)
+  }
+
+  const handleEnhancedContentApply = (enhanced: any) => {
+    if (typeof enhanced === 'string') {
+      setLessonContent(enhanced)
+    }
+    setShowAI(false)
+  }
+
+  const handleAssessmentApply = (assessment: any) => {
+    // You could save this to a separate assessments table
+    console.log("Generated assessment:", assessment)
+    alert(`Generated ${assessment.questions?.length || 0} questions! (Save to assessments feature coming soon)`)
+    setShowAI(false)
   }
 
   const publishCourse = async () => {
@@ -585,7 +625,31 @@ export default function CurriculumBuilderPage() {
               </div>
 
               <div>
-                <NLabel htmlFor="lesson-content">Lesson Content</NLabel>
+                <div className="flex items-center justify-between mb-2">
+                  <NLabel htmlFor="lesson-content">Lesson Content</NLabel>
+                  <div className="flex gap-2">
+                    {lessonContent && (
+                      <>
+                        <NButton
+                          variant="neutral"
+                          size="sm"
+                          onClick={handleEnhanceLessonContent}
+                        >
+                          <Sparkles className="w-3 h-3 mr-2" />
+                          Enhance Content
+                        </NButton>
+                        <NButton
+                          variant="accent"
+                          size="sm"
+                          onClick={handleGenerateAssessment}
+                        >
+                          <Sparkles className="w-3 h-3 mr-2" />
+                          Generate Quiz
+                        </NButton>
+                      </>
+                    )}
+                  </div>
+                </div>
                 <RichTextEditor
                   content={lessonContent}
                   onChange={setLessonContent}
@@ -637,6 +701,22 @@ export default function CurriculumBuilderPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* AI Teaching Assistant Modal */}
+      {showAI && (
+        <AITeachingAssistant
+          mode={aiMode}
+          onClose={() => setShowAI(false)}
+          onApply={aiMode === "assessment-generator" ? handleAssessmentApply : handleEnhancedContentApply}
+          initialData={
+            aiMode === "assessment-generator"
+              ? { content: lessonContent, title: lessonTitle }
+              : aiMode === "content-enhancer"
+              ? { text: lessonContent, type: "lessonContent" }
+              : undefined
+          }
+        />
       )}
     </EducatorLayout>
   )

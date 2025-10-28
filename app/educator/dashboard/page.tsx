@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { EducatorLayout } from "@/components/educator-layout"
 import { NButton } from "@/components/ui/nbutton"
 import { NCard, NCardHeader, NCardTitle, NCardDescription, NCardContent } from "@/components/ui/ncard"
+import { AITeachingAssistant } from "@/components/ai-teaching-assistant"
 import {
   LineChart,
   Line,
@@ -21,6 +22,10 @@ import {
   Edit,
   Eye,
   Star,
+  Sparkles,
+  TrendingUp,
+  Lightbulb,
+  AlertCircle,
 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
@@ -33,6 +38,8 @@ interface CourseWithStats extends Course {
 export default function EducatorDashboard() {
   const [courses, setCourses] = useState<CourseWithStats[]>([])
   const [loading, setLoading] = useState(true)
+  const [showAI, setShowAI] = useState(false)
+  const [aiInsights, setAiInsights] = useState<any>(null)
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalRevenue: 0,
@@ -95,10 +102,52 @@ export default function EducatorDashboard() {
         activeCourses,
         avgRating: 4.8, // TODO: Calculate from reviews when implemented
       })
+
+      // Generate AI insights if there's data
+      if (coursesWithStats.length > 0 && totalStudents > 0) {
+        generateAIInsights(coursesWithStats, {
+          totalEnrolled: totalStudents,
+          activeStudents: Math.floor(totalStudents * 0.7), // Estimate
+          completed: Math.floor(totalStudents * 0.4), // Estimate
+          averageProgress: 65, // Estimate
+        })
+      }
     } catch (err) {
       console.error("Error loading dashboard data:", err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const generateAIInsights = async (courseData: CourseWithStats[], enrollmentStats: any) => {
+    try {
+      const topCourse = courseData[0]
+      if (!topCourse) return
+
+      const response = await fetch("/api/ai/educator/student-insights", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          courseData: {
+            title: topCourse.title,
+            totalSections: 0,
+            totalLessons: 0,
+            price: topCourse.price,
+          },
+          enrollmentStats,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setAiInsights(data.insights)
+        }
+      }
+    } catch (err) {
+      console.error("Error generating AI insights:", err)
     }
   }
 
@@ -120,16 +169,69 @@ export default function EducatorDashboard() {
       <header className="sticky top-0 z-30 bg-background border-b-4 border-border">
         <div className="px-6 py-5 flex items-center justify-between">
           <h1 className="text-3xl font-heading">Educator Dashboard</h1>
-          <Link href="/educator/courses/create">
-            <NButton variant="default" size="lg">
-              <Plus className="w-5 h-5 mr-2" />
-              Create Course
-            </NButton>
-          </Link>
+          <div className="flex gap-3">
+            {courses.length > 0 && (
+              <NButton variant="accent" size="lg" onClick={() => setShowAI(true)}>
+                <Sparkles className="w-5 h-5 mr-2" />
+                AI Insights
+              </NButton>
+            )}
+            <Link href="/educator/courses/create">
+              <NButton variant="default" size="lg">
+                <Plus className="w-5 h-5 mr-2" />
+                Create Course
+              </NButton>
+            </Link>
+          </div>
         </div>
       </header>
 
       <main className="p-6 space-y-8">
+        {/* AI Insights Banner */}
+        {aiInsights && aiInsights.insights && aiInsights.insights.length > 0 && (
+          <NCard className="p-6 bg-gradient-to-br from-main/5 to-accent/5 border-main/30">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-main border-2 border-border rounded-base flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-6 h-6 text-main-foreground" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-heading mb-2 flex items-center gap-2">
+                  AI-Powered Insights
+                  <span className={`text-xs px-2 py-1 rounded-base ${
+                    aiInsights.overallHealth === 'excellent' ? 'bg-success/20 text-success' :
+                    aiInsights.overallHealth === 'good' ? 'bg-main/20 text-main' :
+                    'bg-amber-100 text-amber-700'
+                  }`}>
+                    {aiInsights.overallHealth?.replace('_', ' ').toUpperCase()}
+                  </span>
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {aiInsights.insights.slice(0, 2).map((insight: any, idx: number) => (
+                    <div key={idx} className="flex items-start gap-2 p-3 bg-white rounded-base border-2 border-border">
+                      {insight.type === 'strength' ? (
+                        <Lightbulb className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
+                      ) : insight.type === 'concern' ? (
+                        <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+                      ) : (
+                        <TrendingUp className="w-4 h-4 text-main flex-shrink-0 mt-0.5" />
+                      )}
+                      <div>
+                        <p className="text-sm font-heading">{insight.title}</p>
+                        <p className="text-xs text-foreground/70 font-base line-clamp-2">{insight.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4">
+                  <NButton variant="neutral" size="sm" onClick={() => setShowAI(true)}>
+                    View All Insights & Recommendations
+                  </NButton>
+                </div>
+              </div>
+            </div>
+          </NCard>
+        )}
+
         {/* Stats Grid */}
         <div className="grid md:grid-cols-4 gap-6">
           <NCard className="p-6 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all">
@@ -279,6 +381,28 @@ export default function EducatorDashboard() {
           </div>
         )}
       </main>
+
+      {/* AI Insights Modal */}
+      {showAI && (
+        <AITeachingAssistant
+          mode="student-insights"
+          onClose={() => setShowAI(false)}
+          initialData={{
+            courseData: courses[0] ? {
+              title: "Overall Performance",
+              totalSections: 0,
+              totalLessons: 0,
+              price: 0,
+            } : null,
+            enrollmentStats: {
+              totalEnrolled: stats.totalStudents,
+              activeStudents: Math.floor(stats.totalStudents * 0.7),
+              completed: Math.floor(stats.totalStudents * 0.4),
+              averageProgress: 65,
+            },
+          }}
+        />
+      )}
     </EducatorLayout>
   )
 }

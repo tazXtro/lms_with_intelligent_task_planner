@@ -10,8 +10,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select } from "@/components/ui/select"
 import { RichTextEditor } from "@/components/rich-text-editor"
 import { FileUpload } from "@/components/file-upload"
+import { AITeachingAssistant } from "@/components/ai-teaching-assistant"
 import { createClient } from "@/utils/supabase/client"
-import { ArrowLeft, Save, Plus, X } from "lucide-react"
+import { ArrowLeft, Save, Plus, X, Sparkles } from "lucide-react"
 import Link from "next/link"
 
 const categories = [
@@ -37,6 +38,10 @@ export default function CreateCoursePage() {
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // AI Assistant State
+  const [showAI, setShowAI] = useState(false)
+  const [aiMode, setAiMode] = useState<"course-outline" | "content-enhancer" | "assessment-generator" | "student-insights">("course-outline")
 
   // Course basic info
   const [title, setTitle] = useState("")
@@ -76,6 +81,45 @@ export default function CreateCoursePage() {
     const newArr = [...arr]
     newArr[index] = value
     setArr(newArr)
+  }
+
+  const handleAIOutlineApply = (outline: any) => {
+    if (outline.courseTitle) setTitle(outline.courseTitle)
+    if (outline.subtitle) setSubtitle(outline.subtitle)
+    if (outline.description) setDescription(outline.description)
+    if (outline.learningObjectives) setObjectives(outline.learningObjectives)
+    if (outline.prerequisites) setRequirements(outline.prerequisites)
+    if (outline.targetAudience) setTargetAudience(outline.targetAudience)
+    if (outline.suggestedPrice) setPrice(outline.suggestedPrice.toString())
+    setShowAI(false)
+  }
+
+  const handleEnhanceContent = (field: "description" | "objectives") => {
+    let text = ""
+    let type = field
+    
+    if (field === "description") {
+      text = description
+    } else if (field === "objectives") {
+      text = objectives.filter(o => o.trim()).join("\n")
+    }
+
+    if (!text.trim()) {
+      alert("Please enter some content first to enhance it")
+      return
+    }
+
+    setAiMode("content-enhancer")
+    setShowAI(true)
+  }
+
+  const handleEnhancedContentApply = (enhanced: any) => {
+    if (Array.isArray(enhanced)) {
+      setObjectives(enhanced)
+    } else {
+      setDescription(enhanced)
+    }
+    setShowAI(false)
   }
 
   const handleSaveDraft = async () => {
@@ -146,15 +190,28 @@ export default function CreateCoursePage() {
             </Link>
             <h1 className="text-3xl font-heading">Create New Course</h1>
           </div>
-          <NButton
-            variant="default"
-            size="lg"
-            onClick={handleSaveDraft}
-            disabled={saving}
-          >
-            <Save className="w-5 h-5 mr-2" />
-            {saving ? "Saving..." : "Save Draft"}
-          </NButton>
+          <div className="flex gap-3">
+            <NButton
+              variant="accent"
+              size="lg"
+              onClick={() => {
+                setAiMode("course-outline")
+                setShowAI(true)
+              }}
+            >
+              <Sparkles className="w-5 h-5 mr-2" />
+              AI Generate Course
+            </NButton>
+            <NButton
+              variant="default"
+              size="lg"
+              onClick={handleSaveDraft}
+              disabled={saving}
+            >
+              <Save className="w-5 h-5 mr-2" />
+              {saving ? "Saving..." : "Save Draft"}
+            </NButton>
+          </div>
         </div>
       </header>
 
@@ -238,7 +295,19 @@ export default function CreateCoursePage() {
               </div>
 
               <div>
-                <NLabel htmlFor="description">Course Description</NLabel>
+                <div className="flex items-center justify-between mb-2">
+                  <NLabel htmlFor="description">Course Description</NLabel>
+                  {description && (
+                    <NButton
+                      variant="neutral"
+                      size="sm"
+                      onClick={() => handleEnhanceContent("description")}
+                    >
+                      <Sparkles className="w-3 h-3 mr-2" />
+                      Enhance with AI
+                    </NButton>
+                  )}
+                </div>
                 <RichTextEditor
                   content={description}
                   onChange={setDescription}
@@ -264,15 +333,28 @@ export default function CreateCoursePage() {
           <section className="bg-white border-2 border-border rounded-base p-6 shadow-shadow">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-heading">Learning Objectives</h2>
-              <NButton
-                type="button"
-                variant="default"
-                size="sm"
-                onClick={() => addArrayItem(objectives, setObjectives)}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Objective
-              </NButton>
+              <div className="flex gap-2">
+                {objectives.some(o => o.trim()) && (
+                  <NButton
+                    type="button"
+                    variant="accent"
+                    size="sm"
+                    onClick={() => handleEnhanceContent("objectives")}
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Enhance with AI
+                  </NButton>
+                )}
+                <NButton
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={() => addArrayItem(objectives, setObjectives)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Objective
+                </NButton>
+              </div>
             </div>
             <div className="space-y-3">
               {objectives.map((objective, index) => (
@@ -394,6 +476,20 @@ export default function CreateCoursePage() {
           </div>
         </div>
       </main>
+
+      {/* AI Teaching Assistant Modal */}
+      {showAI && (
+        <AITeachingAssistant
+          mode={aiMode}
+          onClose={() => setShowAI(false)}
+          onApply={aiMode === "course-outline" ? handleAIOutlineApply : handleEnhancedContentApply}
+          initialData={
+            aiMode === "content-enhancer"
+              ? { text: description || objectives.join("\n"), type: description ? "description" : "objectives" }
+              : undefined
+          }
+        />
+      )}
     </EducatorLayout>
   )
 }
