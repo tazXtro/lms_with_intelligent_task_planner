@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
+import { initGoogleCalendarService } from '@/lib/google-calendar'
 
 export async function GET() {
   try {
@@ -92,6 +93,53 @@ export async function POST(request: Request) {
         { error: 'Failed to create task' },
         { status: 500 }
       )
+    }
+
+    // Auto-sync to Google Calendar if connected
+    try {
+      const { data: calendarSettings } = await supabase
+        .from('calendar_sync_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_connected', true)
+        .eq('sync_enabled', true)
+        .single()
+
+      if (calendarSettings && task) {
+        const calendarService = await initGoogleCalendarService()
+        
+        if (calendarService) {
+          const eventId = await calendarService.createTaskEvent(
+            calendarSettings.google_calendar_id,
+            task.title,
+            task.description,
+            task.due_date,
+            task.priority
+          )
+
+          // Store the mapping
+          await supabase
+            .from('task_calendar_events')
+            .insert({
+              task_id: task.id,
+              user_id: user.id,
+              google_event_id: eventId,
+              calendar_id: calendarSettings.google_calendar_id,
+            })
+
+          // Update task with event ID
+          await supabase
+            .from('learner_tasks')
+            .update({
+              calendar_event_id: eventId,
+              last_synced_at: new Date().toISOString(),
+            })
+            .eq('id', task.id)
+        }
+      }
+    } catch (calendarError) {
+      // Log but don't fail the task creation if calendar sync fails
+      console.error('Error syncing to calendar:', calendarError)
     }
 
     return NextResponse.json({ task }, { status: 201 })

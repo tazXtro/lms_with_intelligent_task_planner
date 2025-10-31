@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { NButton } from "@/components/ui/nbutton"
 import { NCard } from "@/components/ui/ncard"
-import { BookOpen, Menu, X, LogOut, Settings, Calendar, Bell, Mail, CheckCircle2, AlertCircle, Brain } from "lucide-react"
+import { BookOpen, Menu, X, LogOut, Settings, Calendar, Bell, Mail, CheckCircle2, AlertCircle, Brain, Loader2 } from "lucide-react"
 import Link from "next/link"
 
 export default function SettingsPage() {
@@ -14,18 +14,136 @@ export default function SettingsPage() {
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [pushNotifications, setPushNotifications] = useState(true)
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "success" | "error">("idle")
+  const [calendarSettings, setCalendarSettings] = useState<any>(null)
+  const [syncedTasksCount, setSyncedTasksCount] = useState(0)
+  const [userEmail, setUserEmail] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState("")
+
+  // Fetch calendar settings on mount
+  useEffect(() => {
+    fetchCalendarSettings()
+    fetchUserEmail()
+  }, [])
+
+  const fetchUserEmail = async () => {
+    try {
+      const response = await fetch('/api/auth/user')
+      if (response.ok) {
+        const data = await response.json()
+        setUserEmail(data.user?.email || "")
+      }
+    } catch (error) {
+      console.error('Error fetching user email:', error)
+    }
+  }
+
+  const fetchCalendarSettings = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/calendar/connect')
+      
+      if (response.ok) {
+        const data = await response.json()
+        setCalendarSettings(data.settings)
+        setSyncedTasksCount(data.syncedTasksCount)
+        setGoogleConnected(data.settings?.is_connected || false)
+      }
+    } catch (error) {
+      console.error('Error fetching calendar settings:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleGoogleConnect = async () => {
     setSyncStatus("syncing")
-    // Simulate Google OAuth connection
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setGoogleConnected(true)
-    setSyncStatus("success")
-    setTimeout(() => setSyncStatus("idle"), 3000)
+    setErrorMessage("")
+    
+    try {
+      const response = await fetch('/api/calendar/connect', {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to connect')
+      }
+
+      setGoogleConnected(true)
+      setSyncStatus("success")
+      
+      // Fetch updated settings
+      await fetchCalendarSettings()
+      
+      // Auto-sync tasks after connecting
+      await handleSyncTasks()
+      
+      setTimeout(() => setSyncStatus("idle"), 3000)
+    } catch (error: any) {
+      console.error('Error connecting Google Calendar:', error)
+      setSyncStatus("error")
+      setErrorMessage(error.message || "Failed to connect. Please try again.")
+      setTimeout(() => setSyncStatus("idle"), 3000)
+    }
   }
 
-  const handleGoogleDisconnect = () => {
-    setGoogleConnected(false)
+  const handleGoogleDisconnect = async () => {
+    if (!confirm('Are you sure you want to disconnect Google Calendar? This will remove all synced events.')) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/calendar/connect', {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        setGoogleConnected(false)
+        setCalendarSettings(null)
+        setSyncedTasksCount(0)
+      }
+    } catch (error) {
+      console.error('Error disconnecting Google Calendar:', error)
+      alert('Failed to disconnect. Please try again.')
+    }
+  }
+
+  const handleSyncTasks = async () => {
+    try {
+      const response = await fetch('/api/calendar/sync', {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to sync tasks')
+      }
+
+      // Refresh settings to get updated sync count
+      await fetchCalendarSettings()
+
+      if (data.errors && data.errors.length > 0) {
+        console.warn('Some tasks failed to sync:', data.errors)
+      }
+    } catch (error: any) {
+      console.error('Error syncing tasks:', error)
+      throw error
+    }
+  }
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Never'
+    const date = new Date(dateString)
+    return date.toLocaleString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   return (
@@ -106,72 +224,130 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <NCard className="p-6 mb-6 bg-main/5 border-main/20">
-                {googleConnected ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-success border-2 border-border rounded-base flex items-center justify-center">
-                        <CheckCircle2 className="w-6 h-6 text-main-foreground" />
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-main" />
+                </div>
+              ) : (
+                <>
+                  <NCard className="p-6 mb-6 bg-main/5 border-main/20">
+                    {googleConnected ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-success border-2 border-border rounded-base flex items-center justify-center">
+                            <CheckCircle2 className="w-6 h-6 text-main-foreground" />
+                          </div>
+                          <div>
+                            <p className="font-heading text-lg">Connected to Google Calendar</p>
+                            <p className="text-sm text-foreground/70 font-base">{userEmail}</p>
+                          </div>
+                        </div>
+                        <NCard className="p-5 bg-success/10 border-success/30">
+                          <p className="text-success font-heading mb-2">Sync Status: Active</p>
+                          <p className="text-foreground/70 font-base text-sm">
+                            Your learning tasks are automatically synced to your Google Calendar. New tasks will sync immediately.
+                          </p>
+                        </NCard>
                       </div>
-                      <div>
-                        <p className="font-heading text-lg">Connected to Google Calendar</p>
-                        <p className="text-sm text-foreground/70 font-base">your.email@gmail.com</p>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-foreground/10 border-2 border-border rounded-base flex items-center justify-center">
+                            <AlertCircle className="w-6 h-6 text-foreground" />
+                          </div>
+                          <div>
+                            <p className="font-heading text-lg">Not Connected</p>
+                            <p className="text-sm text-foreground/70 font-base">Connect your Google Calendar to sync tasks</p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <NCard className="p-5 bg-success/10 border-success/30">
-                      <p className="text-success font-heading mb-2">Sync Status: Active</p>
-                      <p className="text-foreground/70 font-base text-sm">
-                        Your learning tasks are automatically synced to your Google Calendar. New tasks will appear
-                        within 5 minutes.
-                      </p>
+                    )}
+                  </NCard>
+
+                  {errorMessage && (
+                    <NCard className="mb-5 p-5 bg-destructive/10 border-destructive/30">
+                      <div className="flex items-center gap-2 text-destructive">
+                        <AlertCircle className="w-5 h-5" />
+                        <span className="text-sm font-base">{errorMessage}</span>
+                      </div>
                     </NCard>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-foreground/10 border-2 border-border rounded-base flex items-center justify-center">
-                        <AlertCircle className="w-6 h-6 text-foreground" />
-                      </div>
-                      <div>
-                        <p className="font-heading text-lg">Not Connected</p>
-                        <p className="text-sm text-foreground/70 font-base">Connect your Google Calendar to sync tasks</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </NCard>
+                  )}
 
-              <div className="flex gap-3">
-                {googleConnected ? (
-                  <>
-                    <NButton onClick={handleGoogleDisconnect} variant="neutral">
-                      Disconnect
-                    </NButton>
-                    <NButton variant="default">
-                      Manage Sync Settings
-                    </NButton>
-                  </>
-                ) : (
-                  <NButton
-                    onClick={handleGoogleConnect}
-                    disabled={syncStatus === "syncing"}
-                    variant="default"
-                    size="lg"
-                  >
-                    {syncStatus === "syncing" ? "Connecting..." : "Connect Google Calendar"}
-                  </NButton>
-                )}
-              </div>
-
-              {syncStatus === "success" && (
-                <NCard className="mt-5 p-5 bg-success/10 border-success/30">
-                  <div className="flex items-center gap-2 text-success">
-                    <CheckCircle2 className="w-5 h-5" />
-                    <span className="text-sm font-heading">Successfully connected to Google Calendar!</span>
+                  <div className="flex gap-3">
+                    {googleConnected ? (
+                      <>
+                        <NButton onClick={handleGoogleDisconnect} variant="neutral">
+                          Disconnect
+                        </NButton>
+                        <NButton 
+                          onClick={async () => {
+                            try {
+                              await handleSyncTasks()
+                              alert('✅ Tasks synced successfully!')
+                            } catch (error) {
+                              alert('❌ Failed to sync tasks. Please try again.')
+                            }
+                          }} 
+                          variant="default"
+                        >
+                          Sync Now
+                        </NButton>
+                      </>
+                    ) : (
+                      <NButton
+                        onClick={handleGoogleConnect}
+                        disabled={syncStatus === "syncing"}
+                        variant="default"
+                        size="lg"
+                      >
+                        {syncStatus === "syncing" ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Connecting...
+                          </>
+                        ) : (
+                          "Connect Google Calendar"
+                        )}
+                      </NButton>
+                    )}
                   </div>
-                </NCard>
+
+                  {syncStatus === "success" && (
+                    <NCard className="mt-5 p-5 bg-success/10 border-success/30">
+                      <div className="flex items-center gap-2 text-success">
+                        <CheckCircle2 className="w-5 h-5" />
+                        <span className="text-sm font-heading">Successfully connected to Google Calendar!</span>
+                      </div>
+                    </NCard>
+                  )}
+                </>
               )}
             </NCard>
+
+            {/* Calendar Sync Details */}
+            {googleConnected && calendarSettings && (
+              <NCard className="p-8 bg-main/5 border-main/20">
+                <h3 className="font-heading text-xl mb-5">Sync Details</h3>
+                <div className="space-y-4 text-sm font-base">
+                  <div className="flex justify-between p-3 border-b-2 border-border">
+                    <span className="text-foreground/70">Last Sync:</span>
+                    <span className="font-heading">{formatDate(calendarSettings.last_sync_at)}</span>
+                  </div>
+                  <div className="flex justify-between p-3 border-b-2 border-border">
+                    <span className="text-foreground/70">Tasks Synced:</span>
+                    <span className="font-heading">{syncedTasksCount} tasks</span>
+                  </div>
+                  <div className="flex justify-between p-3 border-b-2 border-border">
+                    <span className="text-foreground/70">Calendar:</span>
+                    <span className="font-heading">{calendarSettings.calendar_name || 'DigiGyan Learning Tasks'}</span>
+                  </div>
+                  <div className="flex justify-between p-3">
+                    <span className="text-foreground/70">Sync Frequency:</span>
+                    <span className="font-heading">Real-time</span>
+                  </div>
+                </div>
+              </NCard>
+            )}
 
             {/* Notification Settings */}
             <NCard className="p-8">
@@ -292,31 +468,6 @@ export default function SettingsPage() {
                 </div>
               </div>
             </NCard>
-
-            {/* Calendar Sync Details */}
-            {googleConnected && (
-              <NCard className="p-8 bg-main/5 border-main/20">
-                <h3 className="font-heading text-xl mb-5">Sync Details</h3>
-                <div className="space-y-4 text-sm font-base">
-                  <div className="flex justify-between p-3 border-b-2 border-border">
-                    <span className="text-foreground/70">Last Sync:</span>
-                    <span className="font-heading">Just now</span>
-                  </div>
-                  <div className="flex justify-between p-3 border-b-2 border-border">
-                    <span className="text-foreground/70">Tasks Synced:</span>
-                    <span className="font-heading">12 tasks</span>
-                  </div>
-                  <div className="flex justify-between p-3 border-b-2 border-border">
-                    <span className="text-foreground/70">Calendar:</span>
-                    <span className="font-heading">DigiGyan Learning Tasks</span>
-                  </div>
-                  <div className="flex justify-between p-3">
-                    <span className="text-foreground/70">Sync Frequency:</span>
-                    <span className="font-heading">Real-time</span>
-                  </div>
-                </div>
-              </NCard>
-            )}
 
             {/* Save Button */}
             <div className="flex gap-3">
