@@ -26,6 +26,7 @@ const navItems = [
   { href: "/learner/courses", label: "My Courses", icon: BookOpen },
   { href: "/learner/browse", label: "Browse Courses", icon: Search },
   { href: "/learner/tasks", label: "Task Planner", icon: Clock },
+  { href: "/learner/canvas", label: "Canvas LMS", icon: BookOpen },
 ]
 
 export function LearnerLayout({ children }: LearnerLayoutProps) {

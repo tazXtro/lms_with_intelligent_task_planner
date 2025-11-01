@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { NButton } from "@/components/ui/nbutton"
 import { NCard } from "@/components/ui/ncard"
-import { BookOpen, Menu, X, LogOut, Settings, Calendar, Bell, Mail, CheckCircle2, AlertCircle, Brain, Loader2 } from "lucide-react"
+import { BookOpen, Menu, X, LogOut, Settings, Calendar, Bell, Mail, CheckCircle2, AlertCircle, Brain, Loader2, GraduationCap } from "lucide-react"
 import Link from "next/link"
 
 export default function SettingsPage() {
@@ -19,11 +19,22 @@ export default function SettingsPage() {
   const [userEmail, setUserEmail] = useState("")
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState("")
+  
+  // Canvas integration state
+  const [canvasConnected, setCanvasConnected] = useState(false)
+  const [canvasUrl, setCanvasUrl] = useState("https://canvas.instructure.com")
+  const [canvasToken, setCanvasToken] = useState("")
+  const [canvasLoading, setCanvasLoading] = useState(false)
+  const [canvasError, setCanvasError] = useState("")
+  const [canvasStats, setCanvasStats] = useState({ courses: 0, assignments: 0, announcements: 0 })
+  const [canvasSettings, setCanvasSettings] = useState<any>(null)
+  const [showCanvasForm, setShowCanvasForm] = useState(false)
 
   // Fetch calendar settings on mount
   useEffect(() => {
     fetchCalendarSettings()
     fetchUserEmail()
+    fetchCanvasSettings()
   }, [])
 
   const fetchUserEmail = async () => {
@@ -144,6 +155,112 @@ export default function SettingsPage() {
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  // Canvas functions
+  const fetchCanvasSettings = async () => {
+    try {
+      const response = await fetch('/api/canvas/connect')
+      
+      if (response.ok) {
+        const data = await response.json()
+        setCanvasConnected(data.connected)
+        setCanvasSettings(data.settings)
+        setCanvasStats(data.stats)
+      }
+    } catch (error) {
+      console.error('Error fetching Canvas settings:', error)
+    }
+  }
+
+  const handleCanvasConnect = async () => {
+    if (!canvasUrl || !canvasToken) {
+      setCanvasError('Please provide both Canvas URL and access token')
+      return
+    }
+
+    setCanvasLoading(true)
+    setCanvasError("")
+    
+    try {
+      const response = await fetch('/api/canvas/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ canvasUrl, accessToken: canvasToken }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to connect')
+      }
+
+      setCanvasConnected(true)
+      setShowCanvasForm(false)
+      setCanvasToken("")
+      
+      // Fetch updated settings
+      await fetchCanvasSettings()
+      
+      // Auto-sync Canvas data after connecting
+      await handleCanvasSync()
+      
+      alert('✅ Successfully connected to Canvas!')
+    } catch (error: any) {
+      console.error('Error connecting Canvas:', error)
+      setCanvasError(error.message || "Failed to connect. Please check your URL and token.")
+    } finally {
+      setCanvasLoading(false)
+    }
+  }
+
+  const handleCanvasDisconnect = async () => {
+    if (!confirm('Are you sure you want to disconnect Canvas? This will remove all synced data.')) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/canvas/connect', {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        setCanvasConnected(false)
+        setCanvasSettings(null)
+        setCanvasStats({ courses: 0, assignments: 0, announcements: 0 })
+        alert('✅ Canvas disconnected successfully')
+      }
+    } catch (error) {
+      console.error('Error disconnecting Canvas:', error)
+      alert('❌ Failed to disconnect. Please try again.')
+    }
+  }
+
+  const handleCanvasSync = async () => {
+    setCanvasLoading(true)
+    setCanvasError("")
+    
+    try {
+      const response = await fetch('/api/canvas/sync', {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to sync')
+      }
+
+      // Fetch updated settings
+      await fetchCanvasSettings()
+      
+      alert(`✅ Canvas data synced successfully!\n\nCourses: ${data.results.courses}\nAssignments: ${data.results.assignments}\nAnnouncements: ${data.results.announcements}\nGrades: ${data.results.grades}`)
+    } catch (error: any) {
+      console.error('Error syncing Canvas:', error)
+      setCanvasError(error.message || "Failed to sync. Please try again.")
+    } finally {
+      setCanvasLoading(false)
+    }
   }
 
   return (
@@ -344,6 +461,184 @@ export default function SettingsPage() {
                   <div className="flex justify-between p-3">
                     <span className="text-foreground/70">Sync Frequency:</span>
                     <span className="font-heading">Real-time</span>
+                  </div>
+                </div>
+              </NCard>
+            )}
+
+            {/* Canvas LMS Integration */}
+            <NCard className="p-8">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h2 className="text-3xl font-heading mb-3 flex items-center gap-3">
+                    <div className="w-12 h-12 bg-accent border-2 border-border rounded-base flex items-center justify-center">
+                      <GraduationCap className="w-6 h-6 text-main-foreground" />
+                    </div>
+                    Canvas LMS Integration
+                  </h2>
+                  <p className="text-foreground/70 font-base text-lg">
+                    Connect your Canvas account to sync courses, assignments, and announcements
+                  </p>
+                </div>
+              </div>
+
+              <NCard className="p-6 mb-6 bg-accent/5 border-accent/20">
+                {canvasConnected ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-success border-2 border-border rounded-base flex items-center justify-center">
+                        <CheckCircle2 className="w-6 h-6 text-main-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-heading text-lg">Connected to Canvas</p>
+                        <p className="text-sm text-foreground/70 font-base">{canvasSettings?.canvas_url}</p>
+                      </div>
+                    </div>
+                    <NCard className="p-5 bg-success/10 border-success/30">
+                      <p className="text-success font-heading mb-2">Sync Status: Active</p>
+                      <div className="grid grid-cols-3 gap-4 mt-4">
+                        <div className="text-center">
+                          <p className="text-2xl font-heading text-foreground">{canvasStats.courses}</p>
+                          <p className="text-sm text-foreground/70 font-base">Courses</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-heading text-foreground">{canvasStats.assignments}</p>
+                          <p className="text-sm text-foreground/70 font-base">Assignments</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-2xl font-heading text-foreground">{canvasStats.announcements}</p>
+                          <p className="text-sm text-foreground/70 font-base">Announcements</p>
+                        </div>
+                      </div>
+                    </NCard>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-foreground/10 border-2 border-border rounded-base flex items-center justify-center">
+                        <AlertCircle className="w-6 h-6 text-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-heading text-lg">Not Connected</p>
+                        <p className="text-sm text-foreground/70 font-base">Connect your Canvas account to get started</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </NCard>
+
+              {canvasError && (
+                <NCard className="mb-5 p-5 bg-destructive/10 border-destructive/30">
+                  <div className="flex items-center gap-2 text-destructive">
+                    <AlertCircle className="w-5 h-5" />
+                    <span className="text-sm font-base">{canvasError}</span>
+                  </div>
+                </NCard>
+              )}
+
+              {!canvasConnected && showCanvasForm && (
+                <NCard className="p-6 mb-6 bg-main/5 border-main/20">
+                  <h3 className="font-heading text-xl mb-4">Connect to Canvas</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-heading mb-2">Canvas URL</label>
+                      <input
+                        type="url"
+                        value={canvasUrl}
+                        onChange={(e) => setCanvasUrl(e.target.value)}
+                        placeholder="https://canvas.instructure.com"
+                        className="w-full px-4 py-3 rounded-base border-2 border-border bg-background font-base"
+                      />
+                      <p className="text-xs text-foreground/60 mt-1 font-base">
+                        Your Canvas institution URL (e.g., https://yourschool.instructure.com)
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-heading mb-2">Access Token</label>
+                      <input
+                        type="password"
+                        value={canvasToken}
+                        onChange={(e) => setCanvasToken(e.target.value)}
+                        placeholder="Enter your Canvas access token"
+                        className="w-full px-4 py-3 rounded-base border-2 border-border bg-background font-base"
+                      />
+                      <p className="text-xs text-foreground/60 mt-1 font-base">
+                        Generate a token from Canvas Settings → Approved Integrations → New Access Token
+                      </p>
+                    </div>
+                  </div>
+                </NCard>
+              )}
+
+              <div className="flex gap-3">
+                {canvasConnected ? (
+                  <>
+                    <NButton onClick={handleCanvasDisconnect} variant="neutral">
+                      Disconnect
+                    </NButton>
+                    <NButton 
+                      onClick={handleCanvasSync}
+                      disabled={canvasLoading}
+                      variant="default"
+                    >
+                      {canvasLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Syncing...
+                        </>
+                      ) : (
+                        "Sync Now"
+                      )}
+                    </NButton>
+                  </>
+                ) : (
+                  <>
+                    {showCanvasForm ? (
+                      <>
+                        <NButton
+                          onClick={handleCanvasConnect}
+                          disabled={canvasLoading}
+                          variant="default"
+                        >
+                          {canvasLoading ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Connecting...
+                            </>
+                          ) : (
+                            "Connect"
+                          )}
+                        </NButton>
+                        <NButton onClick={() => setShowCanvasForm(false)} variant="neutral">
+                          Cancel
+                        </NButton>
+                      </>
+                    ) : (
+                      <NButton onClick={() => setShowCanvasForm(true)} variant="default" size="lg">
+                        Connect Canvas
+                      </NButton>
+                    )}
+                  </>
+                )}
+              </div>
+            </NCard>
+
+            {/* Canvas Sync Details */}
+            {canvasConnected && canvasSettings && (
+              <NCard className="p-8 bg-accent/5 border-accent/20">
+                <h3 className="font-heading text-xl mb-5">Canvas Sync Details</h3>
+                <div className="space-y-4 text-sm font-base">
+                  <div className="flex justify-between p-3 border-b-2 border-border">
+                    <span className="text-foreground/70">Last Sync:</span>
+                    <span className="font-heading">{formatDate(canvasSettings.last_sync_at)}</span>
+                  </div>
+                  <div className="flex justify-between p-3 border-b-2 border-border">
+                    <span className="text-foreground/70">Canvas URL:</span>
+                    <span className="font-heading">{canvasSettings.canvas_url}</span>
+                  </div>
+                  <div className="flex justify-between p-3">
+                    <span className="text-foreground/70">Sync Status:</span>
+                    <span className="font-heading text-success">Active</span>
                   </div>
                 </div>
               </NCard>
