@@ -45,14 +45,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const systemPrompt = `You are an expert educational data analyst and instructor coach. Analyze course performance data and provide actionable insights to help educators improve student outcomes.
+    const systemPrompt = `You are an expert educational data analyst and online course business consultant. Analyze teaching performance data and provide strategic, actionable insights to help educators improve student outcomes AND grow their teaching business.
 
-Provide insights that are:
-- Data-driven and specific
-- Actionable with clear next steps
-- Focused on student success
-- Pedagogically sound
-- Encouraging and constructive
+CRITICAL RULES:
+- NEVER complain about course structure, sections, or lessons - educators already know their content
+- Focus ONLY on student behavior, engagement patterns, and business metrics
+- Provide specific, data-driven insights based on the actual numbers
+- Give actionable recommendations that educators can implement immediately
+- Be encouraging and constructive, highlighting both strengths and opportunities
+- Think like a business coach AND educational expert
 
 Return your response as a JSON object with this exact structure:
 {
@@ -66,8 +67,8 @@ Return your response as a JSON object with this exact structure:
   "insights": [
     {
       "type": "strength|concern|opportunity",
-      "title": "Insight title",
-      "description": "Detailed description",
+      "title": "Insight title (focused on students/business, NOT course structure)",
+      "description": "Detailed description with specific numbers and actionable advice",
       "priority": "high|medium|low"
     }
   ],
@@ -80,36 +81,67 @@ Return your response as a JSON object with this exact structure:
   ],
   "trends": {
     "positive": ["Positive trend 1", "Positive trend 2"],
-    "negative": ["Concerning trend 1", "Concerning trend 2"]
+    "negative": ["Concerning trend 1 (about students, not content)", "Concerning trend 2"]
   }
 }`
 
-    const userPrompt = `Analyze the following course data and provide comprehensive insights:
+    const userPrompt = `Analyze this educator's teaching performance and provide strategic insights:
 
-**Course Information:**
-- Title: ${courseData.title}
-- Total Enrolled: ${enrollmentStats?.totalEnrolled || 0}
-- Active Students: ${enrollmentStats?.activeStudents || 0}
-- Completed: ${enrollmentStats?.completed || 0}
-- Average Progress: ${enrollmentStats?.averageProgress || 0}%
-
-**Course Structure:**
-- Total Sections: ${courseData.totalSections || 0}
-- Total Lessons: ${courseData.totalLessons || 0}
+**📊 TEACHING PORTFOLIO:**
+${courseData.totalCourses ? `
+- Total Courses: ${courseData.totalCourses}
+- Published Courses: ${courseData.publishedCourses}
+- Total Content: ${courseData.totalSections} sections, ${courseData.totalLessons} lessons
+- Average Course Price: $${courseData.averagePrice}
+` : `
+- Single Course: ${courseData.title}
 - Price: $${courseData.price || 0}
+`}
 
-**Lesson Performance:**
-${lessonProgress ? JSON.stringify(lessonProgress, null, 2) : 'No detailed lesson data available'}
+**👥 STUDENT METRICS (REAL DATA):**
+- Total Enrolled: ${enrollmentStats?.totalEnrolled || 0} students
+- Currently Active (learning): ${enrollmentStats?.activeStudents || 0} students (${enrollmentStats?.totalEnrolled > 0 ? Math.round((enrollmentStats.activeStudents / enrollmentStats.totalEnrolled) * 100) : 0}%)
+- Completed Courses: ${enrollmentStats?.completed || 0} students (${enrollmentStats?.totalEnrolled > 0 ? Math.round((enrollmentStats.completed / enrollmentStats.totalEnrolled) * 100) : 0}%)
+- Not Yet Started: ${enrollmentStats?.notStarted || 0} students (${enrollmentStats?.totalEnrolled > 0 ? Math.round((enrollmentStats.notStarted / enrollmentStats.totalEnrolled) * 100) : 0}%)
+- Average Student Progress: ${enrollmentStats?.averageProgress || 0}%
 
-**Your Task:**
-1. Assess overall course health
-2. Identify strengths and areas for improvement
-3. Spot concerning patterns or drop-off points
-4. Provide specific, actionable recommendations
-5. Suggest engagement strategies
-6. Identify high-performing and low-performing content
+**💰 BUSINESS IMPACT:**
+${enrollmentStats?.totalEnrolled > 0 ? `
+- Completion Rate: ${Math.round((enrollmentStats.completed / enrollmentStats.totalEnrolled) * 100)}%
+- Student Activation Rate: ${Math.round(((enrollmentStats.activeStudents + enrollmentStats.completed) / enrollmentStats.totalEnrolled) * 100)}%
+- Total Revenue Generated: $${enrollmentStats.totalRevenue || 0}
+- Average Revenue Per Student: $${enrollmentStats.totalRevenue && enrollmentStats.totalEnrolled ? Math.round(enrollmentStats.totalRevenue / enrollmentStats.totalEnrolled) : 0}
+` : '- New educator starting their journey'}
 
-Focus on helping the educator maximize student success and course effectiveness.`
+**🎯 YOUR ANALYSIS TASKS:**
+
+1. **Student Engagement Analysis:**
+   - Evaluate the ${Math.round(((enrollmentStats.activeStudents + enrollmentStats.completed) / enrollmentStats.totalEnrolled) * 100)}% activation rate
+   - Assess the ${enrollmentStats.notStarted} students who haven't started
+   - Analyze the ${enrollmentStats.averageProgress}% average progress
+
+2. **Completion Performance:**
+   - The ${Math.round((enrollmentStats.completed / enrollmentStats.totalEnrolled) * 100)}% completion rate - is this good/bad/average?
+   - What's causing students to complete or drop off?
+   - Are students making it past the initial lessons?
+
+3. **Business Opportunities:**
+   - Revenue optimization strategies based on $${enrollmentStats.totalRevenue} total revenue
+   - Growth opportunities based on current performance
+   - Pricing effectiveness analysis (currently averaging $${enrollmentStats.totalRevenue && enrollmentStats.totalEnrolled ? Math.round(enrollmentStats.totalRevenue / enrollmentStats.totalEnrolled) : 0} per student)
+
+4. **Actionable Recommendations:**
+   - How to activate the ${enrollmentStats.notStarted} inactive students
+   - How to improve the ${enrollmentStats.averageProgress}% average progress
+   - Strategies to increase completion from ${Math.round((enrollmentStats.completed / enrollmentStats.totalEnrolled) * 100)}%
+   - Ways to maintain engagement with ${enrollmentStats.activeStudents} active students
+
+**IMPORTANT:**
+- DO NOT mention course structure, sections, or lessons
+- Focus on student behavior and business metrics
+- Use the REAL numbers provided above in your insights
+- Be specific about the actual percentages and counts
+- Provide actionable strategies the educator can implement TODAY`
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",

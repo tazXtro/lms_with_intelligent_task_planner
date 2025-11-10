@@ -393,35 +393,50 @@ export default function CourseDetailPage() {
 
                     {expandedSections.has(section.id) && (
                       <div className="border-t-2 border-border bg-secondary-background">
-                        {section.lessons.map((lesson, lessonIndex) => (
-                          <div
-                            key={lesson.id}
-                            className="p-4 border-b-2 border-border last:border-b-0 flex items-center justify-between hover:bg-main/5"
-                          >
-                            <div className="flex items-center gap-3">
-                              {lesson.is_preview || course.is_enrolled ? (
-                                <Play className="w-4 h-4 text-main" />
-                              ) : (
-                                <Lock className="w-4 h-4 text-foreground/30" />
-                              )}
-                              <div>
-                                <p className="font-base text-sm">
-                                  {lessonIndex + 1}. {lesson.title}
-                                </p>
-                                {lesson.is_preview && !course.is_enrolled && (
-                                  <span className="text-xs text-main font-heading">
-                                    Preview
-                                  </span>
+                        {section.lessons.map((lesson, lessonIndex) => {
+                          const isClickable = lesson.is_preview || course.is_enrolled
+                          const LessonWrapper = isClickable ? Link : 'div'
+                          const wrapperProps = isClickable
+                            ? { href: lesson.is_preview && !course.is_enrolled 
+                                ? `/learner/preview/${course.id}/${lesson.id}` 
+                                : `/learner/learn/${course.id}` }
+                            : {}
+
+                          return (
+                            <LessonWrapper
+                              key={lesson.id}
+                              {...wrapperProps}
+                              className={`p-4 border-b-2 border-border last:border-b-0 flex items-center justify-between ${
+                                isClickable 
+                                  ? 'hover:bg-main/5 cursor-pointer transition-colors' 
+                                  : ''
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                {lesson.is_preview || course.is_enrolled ? (
+                                  <Play className="w-4 h-4 text-main" />
+                                ) : (
+                                  <Lock className="w-4 h-4 text-foreground/30" />
                                 )}
+                                <div>
+                                  <p className="font-base text-sm">
+                                    {lessonIndex + 1}. {lesson.title}
+                                  </p>
+                                  {lesson.is_preview && !course.is_enrolled && (
+                                    <span className="text-xs text-main font-heading">
+                                      Free Preview - Click to watch
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                            {lesson.duration_minutes && (
-                              <span className="text-xs text-foreground/70 font-base">
-                                {lesson.duration_minutes} min
-                              </span>
-                            )}
-                          </div>
-                        ))}
+                              {lesson.duration_minutes && (
+                                <span className="text-xs text-foreground/70 font-base">
+                                  {lesson.duration_minutes} min
+                                </span>
+                              )}
+                            </LessonWrapper>
+                          )
+                        })}
                       </div>
                     )}
                   </div>

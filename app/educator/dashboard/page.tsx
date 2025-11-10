@@ -8,10 +8,16 @@ import { AITeachingAssistant } from "@/components/ai-teaching-assistant"
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from "recharts"
 import {
@@ -26,6 +32,7 @@ import {
   TrendingUp,
   Lightbulb,
   AlertCircle,
+  CheckCircle2,
 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
@@ -45,6 +52,9 @@ export default function EducatorDashboard() {
     totalRevenue: 0,
     activeCourses: 0,
     avgRating: 0,
+    averageCompletion: 0,
+    activeStudents: 0,
+    completedStudents: 0,
   })
   const supabase = createClient()
 
@@ -75,18 +85,44 @@ export default function EducatorDashboard() {
       let totalStudents = 0
       let totalRevenue = 0
       let activeCourses = 0
+      let totalProgress = 0
+      let activeStudents = 0
+      let completedStudents = 0
 
       const coursesWithStats = await Promise.all(
         (coursesData || []).map(async (course) => {
-          const { count } = await supabase
+          // Get all enrollments for this course with progress data
+          const { data: enrollments, error: enrollmentError } = await supabase
             .from("enrollments")
-            .select("*", { count: "exact", head: true })
+            .select("id, progress")
             .eq("course_id", course.id)
 
-          const enrollmentCount = count || 0
+          if (enrollmentError) {
+            console.error("Error fetching enrollments for course", course.id, enrollmentError)
+          }
+
+          const enrollmentCount = enrollments?.length || 0
           totalStudents += enrollmentCount
           totalRevenue += (course.price || 0) * enrollmentCount
           if (course.status === "published") activeCourses++
+
+          // Calculate progress statistics for this course
+          if (enrollments && enrollments.length > 0) {
+            enrollments.forEach((enrollment) => {
+              const progress = enrollment.progress || 0
+              totalProgress += progress
+              
+              // Consider "active" if progress > 0 and < 100
+              if (progress > 0 && progress < 100) {
+                activeStudents++
+              }
+              
+              // Count completed students (100% progress)
+              if (progress === 100) {
+                completedStudents++
+              }
+            })
+          }
 
           return {
             ...course,
@@ -95,21 +131,28 @@ export default function EducatorDashboard() {
         })
       )
 
+      const averageCompletion = totalStudents > 0 ? Math.round(totalProgress / totalStudents) : 0
+
       setCourses(coursesWithStats.slice(0, 4)) // Top 4 courses for table
       setStats({
         totalStudents,
         totalRevenue,
         activeCourses,
         avgRating: 4.8, // TODO: Calculate from reviews when implemented
+        averageCompletion,
+        activeStudents,
+        completedStudents,
       })
 
       // Generate AI insights if there's data
       if (coursesWithStats.length > 0 && totalStudents > 0) {
         generateAIInsights(coursesWithStats, {
           totalEnrolled: totalStudents,
-          activeStudents: Math.floor(totalStudents * 0.7), // Estimate
-          completed: Math.floor(totalStudents * 0.4), // Estimate
-          averageProgress: 65, // Estimate
+          activeStudents: activeStudents,
+          completed: completedStudents,
+          averageProgress: averageCompletion,
+          totalRevenue: totalRevenue,
+          notStarted: totalStudents - activeStudents - completedStudents,
         })
       }
     } catch (err) {
@@ -121,8 +164,32 @@ export default function EducatorDashboard() {
 
   const generateAIInsights = async (courseData: CourseWithStats[], enrollmentStats: any) => {
     try {
-      const topCourse = courseData[0]
-      if (!topCourse) return
+      if (courseData.length === 0) return
+
+      // Calculate actual total sections and lessons across all courses
+      let totalSections = 0
+      let totalLessons = 0
+      
+      await Promise.all(
+        courseData.map(async (course) => {
+          const { data: sections } = await supabase
+            .from("course_sections")
+            .select("id")
+            .eq("course_id", course.id)
+
+          const sectionIds = (sections || []).map((s) => s.id)
+          totalSections += sectionIds.length
+
+          if (sectionIds.length > 0) {
+            const { count } = await supabase
+              .from("course_lessons")
+              .select("*", { count: "exact", head: true })
+              .in("section_id", sectionIds)
+            
+            totalLessons += count || 0
+          }
+        })
+      )
 
       const response = await fetch("/api/ai/educator/student-insights", {
         method: "POST",
@@ -131,10 +198,12 @@ export default function EducatorDashboard() {
         },
         body: JSON.stringify({
           courseData: {
-            title: topCourse.title,
-            totalSections: 0,
-            totalLessons: 0,
-            price: topCourse.price,
+            title: "Overall Teaching Performance",
+            totalCourses: courseData.length,
+            totalSections,
+            totalLessons,
+            averagePrice: Math.round(courseData.reduce((sum, c) => sum + (c.price || 0), 0) / courseData.length),
+            publishedCourses: courseData.filter(c => c.status === "published").length,
           },
           enrollmentStats,
         }),
@@ -282,18 +351,181 @@ export default function EducatorDashboard() {
           <NCard className="p-6 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-foreground/70 mb-2 font-base">Avg Rating</p>
-                <p className="text-4xl font-heading">{stats.avgRating.toFixed(1)}</p>
+                <p className="text-sm text-foreground/70 mb-2 font-base">Avg Completion</p>
+                <p className="text-4xl font-heading">{stats.averageCompletion}%</p>
                 <p className="text-xs text-foreground/70 mt-2 font-base">
-                  Based on reviews
+                  Student progress rate
                 </p>
               </div>
-              <div className="w-14 h-14 bg-main border-2 border-border rounded-base flex items-center justify-center">
-                <Star className="w-7 h-7 text-main-foreground" />
+              <div className="w-14 h-14 bg-success border-2 border-border rounded-base flex items-center justify-center">
+                <TrendingUp className="w-7 h-7 text-main-foreground" />
               </div>
             </div>
           </NCard>
         </div>
+
+        {/* Student Progress Analytics - Beautiful Charts */}
+        {stats.totalStudents > 0 && (
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Student Status Distribution - Pie Chart */}
+            <NCard className="p-6">
+              <div className="mb-6">
+                <h3 className="text-xl font-heading mb-1">Student Status Distribution</h3>
+                <p className="text-sm text-foreground/70 font-base">
+                  Breakdown of {stats.totalStudents} enrolled students
+                </p>
+              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { 
+                        name: 'Completed', 
+                        value: stats.completedStudents,
+                        color: '#10b981' 
+                      },
+                      { 
+                        name: 'In Progress', 
+                        value: stats.activeStudents,
+                        color: '#3b82f6'
+                      },
+                      { 
+                        name: 'Not Started', 
+                        value: stats.totalStudents - stats.activeStudents - stats.completedStudents,
+                        color: '#94a3b8'
+                      },
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value, percent }) => 
+                      value > 0 ? `${name}: ${value} (${(percent * 100).toFixed(0)}%)` : ''
+                    }
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                    strokeWidth={3}
+                    stroke="#000"
+                  >
+                    {[
+                      { color: '#10b981' },
+                      { color: '#3b82f6' },
+                      { color: '#94a3b8' },
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '3px solid #000',
+                      borderRadius: '0.5rem',
+                      fontFamily: 'var(--font-heading)',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+
+              {/* Legend with Icons */}
+              <div className="mt-6 grid grid-cols-3 gap-3">
+                <div className="flex items-center gap-2 p-3 bg-success/10 rounded-base border-2 border-border">
+                  <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-foreground/70 font-base">Completed</p>
+                    <p className="text-lg font-heading">{stats.completedStudents}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 p-3 bg-main/10 rounded-base border-2 border-border">
+                  <TrendingUp className="w-5 h-5 text-main flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-foreground/70 font-base">Active</p>
+                    <p className="text-lg font-heading">{stats.activeStudents}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 p-3 bg-foreground/5 rounded-base border-2 border-border">
+                  <BookOpen className="w-5 h-5 text-foreground/50 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-foreground/70 font-base">Not Started</p>
+                    <p className="text-lg font-heading">
+                      {stats.totalStudents - stats.activeStudents - stats.completedStudents}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </NCard>
+
+            {/* Completion Progress - Bar Chart */}
+            <NCard className="p-6">
+              <div className="mb-6">
+                <h3 className="text-xl font-heading mb-1">Course Performance</h3>
+                <p className="text-sm text-foreground/70 font-base">
+                  Student enrollment and completion by course
+                </p>
+              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={courses.map(course => ({
+                    name: course.title.length > 20 
+                      ? course.title.substring(0, 20) + '...' 
+                      : course.title,
+                    students: course.enrollment_count,
+                  }))}
+                  margin={{ top: 5, right: 10, left: 0, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeWidth={2} />
+                  <XAxis 
+                    dataKey="name" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                    tick={{ 
+                      fill: '#64748b', 
+                      fontFamily: 'var(--font-base)',
+                      fontSize: 12 
+                    }}
+                  />
+                  <YAxis 
+                    tick={{ 
+                      fill: '#64748b', 
+                      fontFamily: 'var(--font-base)',
+                      fontSize: 12 
+                    }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '3px solid #000',
+                      borderRadius: '0.5rem',
+                      fontFamily: 'var(--font-heading)',
+                    }}
+                    cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
+                  />
+                  <Bar 
+                    dataKey="students" 
+                    fill="#3b82f6" 
+                    radius={[8, 8, 0, 0]}
+                    stroke="#000"
+                    strokeWidth={2}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+
+              {/* Quick Stats Below Chart */}
+              <div className="mt-6 pt-4 border-t-2 border-border">
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div>
+                    <p className="text-xs text-foreground/70 font-base mb-1">Avg Completion Rate</p>
+                    <p className="text-2xl font-heading text-main">{stats.averageCompletion}%</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-foreground/70 font-base mb-1">Total Revenue</p>
+                    <p className="text-2xl font-heading text-accent">${stats.totalRevenue.toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+            </NCard>
+          </div>
+        )}
 
         {/* Quick Stats */}
         {courses.length > 0 && (
@@ -388,17 +620,21 @@ export default function EducatorDashboard() {
           mode="student-insights"
           onClose={() => setShowAI(false)}
           initialData={{
-            courseData: courses[0] ? {
-              title: "Overall Performance",
-              totalSections: 0,
-              totalLessons: 0,
-              price: 0,
+            courseData: courses.length > 0 ? {
+              title: "Overall Teaching Performance",
+              totalCourses: courses.length,
+              totalSections: 0, // Will be calculated by AI insights
+              totalLessons: 0, // Will be calculated by AI insights
+              averagePrice: Math.round(courses.reduce((sum, c) => sum + (c.price || 0), 0) / courses.length),
+              publishedCourses: courses.filter(c => c.status === "published").length,
             } : null,
             enrollmentStats: {
               totalEnrolled: stats.totalStudents,
-              activeStudents: Math.floor(stats.totalStudents * 0.7),
-              completed: Math.floor(stats.totalStudents * 0.4),
-              averageProgress: 65,
+              activeStudents: stats.activeStudents,
+              completed: stats.completedStudents,
+              averageProgress: stats.averageCompletion,
+              notStarted: stats.totalStudents - stats.activeStudents - stats.completedStudents,
+              totalRevenue: stats.totalRevenue,
             },
           }}
         />

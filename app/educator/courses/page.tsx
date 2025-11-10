@@ -12,6 +12,8 @@ import type { Course } from "@/types/database.types"
 
 interface CourseWithStats extends Course {
   enrollment_count: number
+  average_completion: number
+  completed_students: number
 }
 
 export default function CoursesPage() {
@@ -44,17 +46,38 @@ export default function CoursesPage() {
 
       if (error) throw error
 
-      // Load enrollment counts for each course
+      // Load enrollment counts and completion stats for each course
       const coursesWithStats = await Promise.all(
         (coursesData || []).map(async (course) => {
-          const { count } = await supabase
+          // Get all enrollments with progress data
+          const { data: enrollments } = await supabase
             .from("enrollments")
-            .select("*", { count: "exact", head: true })
+            .select("id, progress")
             .eq("course_id", course.id)
+
+          const enrollmentCount = enrollments?.length || 0
+          
+          // Calculate average completion and completed students count
+          let totalProgress = 0
+          let completedStudents = 0
+          
+          if (enrollments && enrollments.length > 0) {
+            enrollments.forEach((enrollment) => {
+              const progress = enrollment.progress || 0
+              totalProgress += progress
+              if (progress === 100) {
+                completedStudents++
+              }
+            })
+          }
+          
+          const averageCompletion = enrollmentCount > 0 ? Math.round(totalProgress / enrollmentCount) : 0
 
           return {
             ...course,
-            enrollment_count: count || 0,
+            enrollment_count: enrollmentCount,
+            average_completion: averageCompletion,
+            completed_students: completedStudents,
           }
         })
       )
@@ -160,7 +183,7 @@ export default function CoursesPage() {
                   {course.subtitle || "No description"}
                 </p>
 
-                <div className="grid grid-cols-3 gap-3 mb-5 text-center">
+                <div className="grid grid-cols-3 gap-3 mb-4 text-center">
                   <div className="p-3 bg-main/5 rounded-base border-2 border-border">
                     <p className="text-xs text-foreground/70 font-base">Students</p>
                     <p className="font-heading text-lg">{course.enrollment_count}</p>
@@ -170,16 +193,36 @@ export default function CoursesPage() {
                     <p className="font-heading text-lg">${course.price}</p>
                   </div>
                   <div className="p-3 bg-success/5 rounded-base border-2 border-border">
-                    <p className="text-xs text-foreground/70 font-base">Level</p>
-                    <p className="font-heading text-sm">{course.level || "All"}</p>
+                    <p className="text-xs text-foreground/70 font-base">Avg Progress</p>
+                    <p className="font-heading text-lg">{course.average_completion}%</p>
                   </div>
                 </div>
+
+                {/* Completion Stats */}
+                {course.enrollment_count > 0 && (
+                  <div className="mb-5 p-3 bg-foreground/5 rounded-base border-2 border-border">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-foreground/70 font-base">
+                        <strong className="text-success">{course.completed_students}</strong> completed
+                      </span>
+                      <span className="text-foreground/70 font-base">
+                        <strong className="text-main">{course.enrollment_count - course.completed_students}</strong> in progress
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex gap-2">
                   <Link href={`/educator/courses/${course.id}/curriculum`} className="flex-1">
                     <NButton variant="default" className="w-full">
                       <Edit className="w-4 h-4 mr-1" />
                       Edit
+                    </NButton>
+                  </Link>
+                  <Link href={`/educator/courses/${course.id}/students`} className="flex-1">
+                    <NButton variant="neutral" className="w-full">
+                      <Eye className="w-4 h-4 mr-1" />
+                      Students
                     </NButton>
                   </Link>
                 </div>
