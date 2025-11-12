@@ -14,6 +14,113 @@ export type Database = {
   }
   public: {
     Tables: {
+      assessment_attempts: {
+        Row: {
+          answers: Json
+          assessment_id: string
+          created_at: string | null
+          enrollment_id: string
+          id: string
+          learner_id: string
+          passed: boolean
+          score: number
+          started_at: string | null
+          submitted_at: string | null
+          time_taken_seconds: number | null
+        }
+        Insert: {
+          answers?: Json
+          assessment_id: string
+          created_at?: string | null
+          enrollment_id: string
+          id?: string
+          learner_id: string
+          passed?: boolean
+          score?: number
+          started_at?: string | null
+          submitted_at?: string | null
+          time_taken_seconds?: number | null
+        }
+        Update: {
+          answers?: Json
+          assessment_id?: string
+          created_at?: string | null
+          enrollment_id?: string
+          id?: string
+          learner_id?: string
+          passed?: boolean
+          score?: number
+          started_at?: string | null
+          submitted_at?: string | null
+          time_taken_seconds?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_attempts_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_attempts_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assessment_questions: {
+        Row: {
+          assessment_id: string
+          correct_answer: number
+          created_at: string | null
+          explanation: string | null
+          id: string
+          options: Json
+          order_index: number
+          points: number | null
+          question_text: string
+          question_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assessment_id: string
+          correct_answer: number
+          created_at?: string | null
+          explanation?: string | null
+          id?: string
+          options?: Json
+          order_index: number
+          points?: number | null
+          question_text: string
+          question_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assessment_id?: string
+          correct_answer?: number
+          created_at?: string | null
+          explanation?: string | null
+          id?: string
+          options?: Json
+          order_index?: number
+          points?: number | null
+          question_text?: string
+          question_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_questions_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_lessons: {
         Row: {
           content: string | null
@@ -251,6 +358,69 @@ export type Database = {
           },
         ]
       }
+      lesson_assessments: {
+        Row: {
+          course_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          difficulty: string | null
+          id: string
+          is_required: boolean | null
+          lesson_id: string
+          max_attempts: number | null
+          passing_score: number | null
+          time_limit_minutes: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          course_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          difficulty?: string | null
+          id?: string
+          is_required?: boolean | null
+          lesson_id: string
+          max_attempts?: number | null
+          passing_score?: number | null
+          time_limit_minutes?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          course_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          difficulty?: string | null
+          id?: string
+          is_required?: boolean | null
+          lesson_id?: string
+          max_attempts?: number | null
+          passing_score?: number | null
+          time_limit_minutes?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_assessments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_assessments_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "course_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lesson_progress: {
         Row: {
           completed: boolean | null
@@ -295,6 +465,62 @@ export type Database = {
             columns: ["lesson_id"]
             isOneToOne: false
             referencedRelation: "course_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learner_tasks: {
+        Row: {
+          id: string
+          learner_id: string
+          title: string
+          description: string | null
+          status: "todo" | "in-progress" | "completed"
+          priority: "low" | "medium" | "high"
+          due_date: string | null
+          course_id: string | null
+          subtasks: Json | null
+          calendar_event_id: string | null
+          last_synced_at: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          learner_id: string
+          title: string
+          description?: string | null
+          status?: "todo" | "in-progress" | "completed"
+          priority?: "low" | "medium" | "high"
+          due_date?: string | null
+          course_id?: string | null
+          subtasks?: Json | null
+          calendar_event_id?: string | null
+          last_synced_at?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          learner_id?: string
+          title?: string
+          description?: string | null
+          status?: "todo" | "in-progress" | "completed"
+          priority?: "low" | "medium" | "high"
+          due_date?: string | null
+          course_id?: string | null
+          subtasks?: Json | null
+          calendar_event_id?: string | null
+          last_synced_at?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learner_tasks_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
             referencedColumns: ["id"]
           },
         ]
@@ -478,6 +704,7 @@ export type CourseLesson = Database['public']['Tables']['course_lessons']['Row']
 export type CourseMaterial = Database['public']['Tables']['course_materials']['Row']
 export type Enrollment = Database['public']['Tables']['enrollments']['Row']
 export type LessonProgress = Database['public']['Tables']['lesson_progress']['Row']
+export type LearnerTask = Database['public']['Tables']['learner_tasks']['Row']
 
 export interface UserWithProfile {
   id: string

@@ -136,48 +136,91 @@ export default function CourseStudentsPage() {
 
       const profilesMap = new Map(profiles?.map((p) => [p.id, p]) || [])
 
-      // Enrich enrollments with student details
+      // Enrich enrollments with student details and calculate actual progress
       let totalProgress = 0
       let completedStudents = 0
       let activeStudents = 0
 
       const enrichedEnrollments = await Promise.all(
         enrollmentsData.map(async (enrollment) => {
-          const progress = enrollment.progress || 0
-          totalProgress += progress
-
-          if (progress === 100) completedStudents++
-          if (progress > 0 && progress < 100) activeStudents++
-
-          // Get completed lessons count
-          const { data: completedLessons } = await supabase
+          // Count actual completed lessons from lesson_progress table
+          const { count: completedLessonsCount } = await supabase
             .from("lesson_progress")
-            .select("id, completed_at")
+            .select("*", { count: "exact", head: true })
+            .eq("enrollment_id", enrollment.id)
+            .eq("completed", true)
+
+          // Calculate actual progress based on real data
+          const actualProgress = totalLessons > 0
+            ? Math.round((completedLessonsCount || 0) / totalLessons * 100)
+            : 0
+
+          console.log(`[Course Students] Enrollment ${enrollment.id}:`, {
+            learner: profilesMap.get(enrollment.learner_id)?.full_name,
+            totalLessons,
+            completedLessons: completedLessonsCount,
+            storedProgress: enrollment.progress,
+            calculatedProgress: actualProgress,
+            isCompleted: actualProgress === 100
+          })
+
+          // Update stored progress if it differs (keep DB in sync)
+          if (actualProgress !== (enrollment.progress || 0)) {
+            console.log(`[Course Students] Updating progress from ${enrollment.progress}% to ${actualProgress}%`)
+            await supabase
+              .from("enrollments")
+              .update({ progress: actualProgress })
+              .eq("id", enrollment.id)
+          }
+
+          // Use actual progress for stats
+          totalProgress += actualProgress
+
+          if (actualProgress === 100) {
+            completedStudents++
+            console.log(`[Course Students] ✓ Student completed: ${profilesMap.get(enrollment.learner_id)?.full_name}`)
+          }
+          if (actualProgress > 0 && actualProgress < 100) activeStudents++
+
+          // Get last activity timestamp
+          const { data: lastCompletedLesson } = await supabase
+            .from("lesson_progress")
+            .select("completed_at")
             .eq("enrollment_id", enrollment.id)
             .eq("completed", true)
             .order("completed_at", { ascending: false })
             .limit(1)
 
-          const lastActivity = completedLessons?.[0]?.completed_at || enrollment.enrolled_at
+          const lastActivity = lastCompletedLesson?.[0]?.completed_at || enrollment.enrolled_at
 
           return {
             ...enrollment,
+            progress: actualProgress, // Use calculated progress
             learner: profilesMap.get(enrollment.learner_id) || null,
             total_lessons: totalLessons,
-            completed_lessons: Math.round((progress / 100) * totalLessons),
+            completed_lessons: completedLessonsCount || 0, // Use actual count, not approximation
             last_activity: lastActivity,
           }
         })
       )
 
       setEnrollments(enrichedEnrollments)
-      setStats({
+      
+      const finalStats = {
         total_students: enrollmentsData.length,
         average_completion: Math.round(totalProgress / enrollmentsData.length),
         completed_students: completedStudents,
         active_students: activeStudents,
         total_lessons: totalLessons,
+      }
+
+      console.log('[Course Students] Final Stats:', {
+        course: courseData.title,
+        ...finalStats,
+        notStarted: enrollmentsData.length - activeStudents - completedStudents
       })
+
+      setStats(finalStats)
     } catch (err) {
       console.error("Error loading student data:", err)
     } finally {
@@ -270,15 +313,31 @@ export default function CourseStudentsPage() {
     <EducatorLayout>
       <header className="bg-main/10 border-b-4 border-border">
         <div className="px-6 py-8">
-          <Link href="/educator/courses">
-            <NButton variant="neutral" size="sm" className="mb-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Courses
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <Link href="/educator/courses">
+              <NButton variant="neutral" size="sm">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Courses
+              </NButton>
+            </Link>
+            <NButton 
+              variant="default" 
+              size="sm" 
+              onClick={() => loadStudentData()}
+              disabled={loading}
+            >
+              <TrendingUp className="w-4 h-4 mr-2" />
+              {loading ? "Refreshing..." : "Refresh Data"}
             </NButton>
-          </Link>
+          </div>
 
           <h1 className="text-4xl font-heading mb-2">{course.title}</h1>
-          <p className="text-lg text-foreground/70 font-base">Student Progress & Analytics</p>
+          <p className="text-lg text-foreground/70 font-base">
+            Student Progress & Analytics
+            {stats.total_students > 0 && (
+              <span className="ml-2 text-sm">• Real-time data from lesson completions</span>
+            )}
+          </p>
         </div>
       </header>
 

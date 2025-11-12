@@ -37,6 +37,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Strip HTML tags and clean content for better AI processing
+    const cleanContent = lessonContent
+      .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '[Video Content]') // Replace iframes with placeholder
+      .replace(/<style[^>]*>.*?<\/style>/gi, '') // Remove style tags
+      .replace(/<script[^>]*>.*?<\/script>/gi, '') // Remove script tags
+      .replace(/<[^>]+>/g, ' ') // Remove remaining HTML tags
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim()
+
     const apiKey = process.env.OPENROUTER_API_KEY
     if (!apiKey) {
       return NextResponse.json(
@@ -72,7 +81,7 @@ Return your response as a JSON object with this exact structure:
 **Difficulty Level:** ${difficulty || "medium"}
 
 **Lesson Content:**
-${lessonContent}
+${cleanContent}
 
 **Requirements:**
 1. Create exactly ${questionCount || 5} multiple-choice questions

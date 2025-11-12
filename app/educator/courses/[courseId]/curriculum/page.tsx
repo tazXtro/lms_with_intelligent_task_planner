@@ -319,11 +319,58 @@ export default function CurriculumBuilderPage() {
     setShowAI(false)
   }
 
-  const handleAssessmentApply = (assessment: any) => {
-    // You could save this to a separate assessments table
-    console.log("Generated assessment:", assessment)
-    alert(`Generated ${assessment.questions?.length || 0} questions! (Save to assessments feature coming soon)`)
-    setShowAI(false)
+  const handleAssessmentApply = async (assessment: any) => {
+    if (!editingLesson && !selectedSectionId) {
+      alert("Please save the lesson first before creating an assessment")
+      return
+    }
+
+    try {
+      setSaving(true)
+
+      // If we're editing an existing lesson, use its ID
+      // Otherwise, we need to save the lesson first
+      let lessonIdToUse = editingLesson
+
+      if (!lessonIdToUse) {
+        alert("Please save the lesson first, then generate the assessment")
+        setShowAI(false)
+        setSaving(false)
+        return
+      }
+
+      const response = await fetch('/api/assessments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lessonId: lessonIdToUse,
+          courseId: courseId,
+          title: `${lessonTitle} - Quiz`,
+          description: `Assessment for ${lessonTitle}`,
+          difficulty: assessment.difficulty || 'medium',
+          questions: assessment.questions,
+          passingScore: 70,
+          isRequired: false
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save assessment')
+      }
+
+      alert(`✅ Assessment saved successfully with ${assessment.questions?.length || 0} questions!\n\nLearners can now take this quiz when they view this lesson.`)
+      setShowAI(false)
+      await loadCourseData()
+    } catch (error) {
+      console.error("Error saving assessment:", error)
+      alert(`Failed to save assessment: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const publishCourse = async () => {

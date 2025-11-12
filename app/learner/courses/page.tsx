@@ -107,19 +107,33 @@ export default function CoursesPage() {
             }
 
             // Get completed lessons count
-            const { data: progressData } = await supabase
+            const { count: completedLessonsCount } = await supabase
               .from("lesson_progress")
-              .select("id")
+              .select("*", { count: "exact", head: true })
               .eq("enrollment_id", enrollment.id)
               .eq("completed", true)
             
-            const completedLessons = progressData?.length || 0
+            const completedLessons = completedLessonsCount || 0
+
+            // Calculate actual progress
+            const actualProgress = totalLessons > 0
+              ? Math.round((completedLessons / totalLessons) * 100)
+              : 0
+
+            // Update stored progress if it differs (keep DB in sync)
+            if (actualProgress !== (enrollment.progress || 0)) {
+              console.log(`[My Courses] Syncing progress for ${course.title}: ${enrollment.progress}% → ${actualProgress}%`)
+              await supabase
+                .from("enrollments")
+                .update({ progress: actualProgress })
+                .eq("id", enrollment.id)
+            }
 
             return {
               ...course,
               instructor: educator?.full_name || "Unknown Instructor",
               enrolled: true, // Always true for this page
-              progress: enrollment.progress || 0,
+              progress: actualProgress, // Use calculated progress
               totalLessons,
               completedLessons,
               enrollmentId: enrollment.id,

@@ -392,13 +392,23 @@ export function AITeachingAssistant({
 
       <div>
         <NLabel htmlFor="lesson-content">Lesson Content *</NLabel>
-        <textarea
-          id="lesson-content"
-          value={lessonContent}
-          onChange={(e) => setLessonContent(e.target.value)}
-          className="w-full px-5 py-3 rounded-base border-2 border-border bg-background font-base text-sm focus:outline-none focus:border-main transition-colors min-h-[200px]"
-          placeholder="Paste your lesson content here..."
-        />
+        <div className="relative">
+          <textarea
+            id="lesson-content"
+            value={lessonContent}
+            onChange={(e) => setLessonContent(e.target.value)}
+            className="w-full px-5 py-3 rounded-base border-2 border-border bg-background font-base text-sm focus:outline-none focus:border-main transition-colors min-h-[200px] font-mono"
+            placeholder="Paste your lesson content here (HTML tags will be processed)..."
+          />
+          {lessonContent && lessonContent.includes('<') && (
+            <div className="mt-2 p-3 bg-warning/10 rounded-base border-2 border-warning/30">
+              <p className="text-xs text-warning flex items-center gap-2">
+                <span>⚠️</span>
+                <span>HTML detected. The AI will extract text content from HTML/iframes for question generation.</span>
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

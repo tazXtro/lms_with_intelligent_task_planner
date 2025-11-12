@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { NButton } from "@/components/ui/nbutton"
 import { NCard } from "@/components/ui/ncard"
 import { Progress } from "@/components/ui/progress"
+import { QuizTaker } from "@/components/quiz-taker"
 import {
   ChevronLeft,
   ChevronRight,
@@ -20,6 +21,7 @@ import {
   Award,
   BarChart3,
   RotateCcw,
+  ClipboardCheck,
 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
@@ -53,10 +55,19 @@ export default function CoursePlayerPage() {
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [completingLesson, setCompletingLesson] = useState(false)
+  const [showQuiz, setShowQuiz] = useState(false)
+  const [currentAssessment, setCurrentAssessment] = useState<any>(null)
+  const [assessmentAttempts, setAssessmentAttempts] = useState<any[]>([])
 
   useEffect(() => {
     loadCourseData()
   }, [courseId])
+
+  useEffect(() => {
+    if (currentLesson) {
+      loadAssessmentForLesson(currentLesson.id)
+    }
+  }, [currentLesson])
 
   const loadCourseData = async () => {
     try {
@@ -226,6 +237,52 @@ export default function CoursePlayerPage() {
       .from("enrollments")
       .update({ progress })
       .eq("id", enrollment.id)
+  }
+
+  const loadAssessmentForLesson = async (lessonId: string) => {
+    try {
+      const response = await fetch(`/api/assessments?lessonId=${lessonId}`)
+      const data = await response.json()
+
+      if (data.success && data.assessment) {
+        setCurrentAssessment(data.assessment)
+        
+        // Load previous attempts
+        const attemptsResponse = await fetch(`/api/assessments/attempt?assessmentId=${data.assessment.id}`)
+        const attemptsData = await attemptsResponse.json()
+        
+        if (attemptsData.success) {
+          setAssessmentAttempts(attemptsData.attempts || [])
+        }
+      } else {
+        setCurrentAssessment(null)
+        setAssessmentAttempts([])
+      }
+    } catch (error) {
+      console.error("Error loading assessment:", error)
+      setCurrentAssessment(null)
+      setAssessmentAttempts([])
+    }
+  }
+
+  const handleQuizComplete = async (results: any) => {
+    // Reload attempts
+    if (currentAssessment) {
+      const attemptsResponse = await fetch(`/api/assessments/attempt?assessmentId=${currentAssessment.id}`)
+      const attemptsData = await attemptsResponse.json()
+      
+      if (attemptsData.success) {
+        setAssessmentAttempts(attemptsData.attempts || [])
+      }
+    }
+  }
+
+  const handleStartQuiz = () => {
+    setShowQuiz(true)
+  }
+
+  const handleCancelQuiz = () => {
+    setShowQuiz(false)
   }
 
   const goToNextLesson = () => {
@@ -610,6 +667,79 @@ export default function CoursePlayerPage() {
               )}
             </NCard>
 
+            {/* Quiz Section */}
+            {currentAssessment && currentAssessment.questions && currentAssessment.questions.length > 0 && (
+              <NCard className="p-6 md:p-8 mb-6 shadow-lg bg-gradient-to-br from-accent/5 to-main/5 border-2 border-accent/20">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <ClipboardCheck className="w-6 h-6 text-accent" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-heading mb-2">{currentAssessment.title}</h3>
+                    {currentAssessment.description && (
+                      <p className="text-foreground/70 font-base mb-3">{currentAssessment.description}</p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-foreground/60 mb-4">
+                      <span className="flex items-center gap-1">
+                        <ClipboardCheck className="w-4 h-4" />
+                        {currentAssessment.questions.length} questions
+                      </span>
+                      {currentAssessment.time_limit_minutes && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          {currentAssessment.time_limit_minutes} min limit
+                        </span>
+                      )}
+                      <span className={`px-2 py-1 rounded-base text-xs font-heading ${
+                        currentAssessment.difficulty === 'easy' ? 'bg-success/10 text-success' :
+                        currentAssessment.difficulty === 'hard' ? 'bg-destructive/10 text-destructive' :
+                        'bg-warning/10 text-warning'
+                      }`}>
+                        {currentAssessment.difficulty}
+                      </span>
+                      <span className="text-foreground/70">
+                        Passing: {currentAssessment.passing_score}%
+                      </span>
+                    </div>
+                    
+                    {/* Previous Attempts */}
+                    {assessmentAttempts.length > 0 && (
+                      <div className="mb-4 p-3 bg-background/50 rounded-base border-2 border-border">
+                        <p className="text-sm font-heading mb-2">Your Previous Attempts:</p>
+                        <div className="space-y-2">
+                          {assessmentAttempts.slice(0, 3).map((attempt: any, idx: number) => (
+                            <div key={attempt.id} className="flex items-center justify-between text-sm">
+                              <span className="text-foreground/70">
+                                Attempt {assessmentAttempts.length - idx}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className={`font-heading ${attempt.passed ? 'text-success' : 'text-destructive'}`}>
+                                  {attempt.score.toFixed(1)}%
+                                </span>
+                                {attempt.passed && (
+                                  <CheckCircle2 className="w-4 h-4 text-success" />
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <NButton
+                      variant="accent"
+                      size="lg"
+                      onClick={handleStartQuiz}
+                      className="group"
+                    >
+                      <ClipboardCheck className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+                      {assessmentAttempts.length > 0 ? 'Retake Quiz' : 'Start Quiz'}
+                    </NButton>
+                  </div>
+                </div>
+              </NCard>
+            )}
+
             {/* Elegant Navigation */}
             <div className="flex items-center justify-between gap-4 pb-12">
               <NButton
@@ -643,6 +773,18 @@ export default function CoursePlayerPage() {
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden transition-opacity duration-300"
           onClick={() => setSidebarOpen(false)}
         />
+      )}
+
+      {/* Quiz Modal */}
+      {showQuiz && currentAssessment && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 overflow-y-auto">
+          <QuizTaker
+            assessment={currentAssessment}
+            onComplete={handleQuizComplete}
+            onCancel={handleCancelQuiz}
+            previousAttempts={assessmentAttempts}
+          />
+        </div>
       )}
     </div>
   )

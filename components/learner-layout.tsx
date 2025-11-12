@@ -13,6 +13,7 @@ import {
   X,
   Brain,
   Search,
+  Calendar,
 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/learner/courses", label: "My Courses", icon: BookOpen },
   { href: "/learner/browse", label: "Browse Courses", icon: Search },
   { href: "/learner/tasks", label: "Task Planner", icon: Clock },
+  { href: "/learner/calendar", label: "Calendar", icon: Calendar },
   { href: "/learner/canvas", label: "Canvas LMS", icon: BookOpen },
 ]
 

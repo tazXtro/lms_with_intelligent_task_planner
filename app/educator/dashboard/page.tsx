@@ -46,7 +46,7 @@ export default function EducatorDashboard() {
   const [courses, setCourses] = useState<CourseWithStats[]>([])
   const [loading, setLoading] = useState(true)
   const [showAI, setShowAI] = useState(false)
-  const [aiInsights, setAiInsights] = useState<any>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalRevenue: 0,
@@ -91,10 +91,10 @@ export default function EducatorDashboard() {
 
       const coursesWithStats = await Promise.all(
         (coursesData || []).map(async (course) => {
-          // Get all enrollments for this course with progress data
+          // Get all enrollments for this course
           const { data: enrollments, error: enrollmentError } = await supabase
             .from("enrollments")
-            .select("id, progress")
+            .select("id, progress, learner_id")
             .eq("course_id", course.id)
 
           if (enrollmentError) {
@@ -106,22 +106,60 @@ export default function EducatorDashboard() {
           totalRevenue += (course.price || 0) * enrollmentCount
           if (course.status === "published") activeCourses++
 
-          // Calculate progress statistics for this course
+          // Calculate progress statistics for this course with actual data
           if (enrollments && enrollments.length > 0) {
-            enrollments.forEach((enrollment) => {
-              const progress = enrollment.progress || 0
-              totalProgress += progress
+            // Get total lesson count for this course
+            const { count: totalLessons } = await supabase
+              .from("course_lessons")
+              .select("*", { count: "exact", head: true })
+              .eq("course_id", course.id)
+
+            for (const enrollment of enrollments) {
+              // Count completed lessons for this enrollment
+              const { count: completedLessons } = await supabase
+                .from("lesson_progress")
+                .select("*", { count: "exact", head: true })
+                .eq("enrollment_id", enrollment.id)
+                .eq("completed", true)
+
+              // Calculate actual progress
+              const actualProgress = totalLessons && totalLessons > 0
+                ? Math.round((completedLessons || 0) / totalLessons * 100)
+                : 0
+
+              // Debug logging
+              console.log(`[Educator Dashboard] Enrollment ${enrollment.id}:`, {
+                course: course.title,
+                totalLessons,
+                completedLessons,
+                storedProgress: enrollment.progress,
+                calculatedProgress: actualProgress,
+                isCompleted: actualProgress === 100
+              })
+
+              // Update stored progress if it differs
+              if (actualProgress !== (enrollment.progress || 0)) {
+                console.log(`[Educator Dashboard] Updating progress for enrollment ${enrollment.id} from ${enrollment.progress}% to ${actualProgress}%`)
+                await supabase
+                  .from("enrollments")
+                  .update({ progress: actualProgress })
+                  .eq("id", enrollment.id)
+              }
+
+              // Use actual progress for stats
+              totalProgress += actualProgress
               
               // Consider "active" if progress > 0 and < 100
-              if (progress > 0 && progress < 100) {
+              if (actualProgress > 0 && actualProgress < 100) {
                 activeStudents++
               }
               
               // Count completed students (100% progress)
-              if (progress === 100) {
+              if (actualProgress === 100) {
                 completedStudents++
+                console.log(`[Educator Dashboard] ✓ Found completed student for course: ${course.title}`)
               }
-            })
+            }
           }
 
           return {
@@ -132,6 +170,16 @@ export default function EducatorDashboard() {
       )
 
       const averageCompletion = totalStudents > 0 ? Math.round(totalProgress / totalStudents) : 0
+      const notStarted = totalStudents - activeStudents - completedStudents
+
+      console.log('[Educator Dashboard] Final Stats:', {
+        totalStudents,
+        completedStudents,
+        activeStudents,
+        notStarted,
+        averageCompletion,
+        totalRevenue
+      })
 
       setCourses(coursesWithStats.slice(0, 4)) // Top 4 courses for table
       setStats({
@@ -144,81 +192,16 @@ export default function EducatorDashboard() {
         completedStudents,
       })
 
-      // Generate AI insights if there's data
-      if (coursesWithStats.length > 0 && totalStudents > 0) {
-        generateAIInsights(coursesWithStats, {
-          totalEnrolled: totalStudents,
-          activeStudents: activeStudents,
-          completed: completedStudents,
-          averageProgress: averageCompletion,
-          totalRevenue: totalRevenue,
-          notStarted: totalStudents - activeStudents - completedStudents,
-        })
-      }
+      // Note: AI insights are now only generated when educator clicks "AI Insights" button
+      // This prevents automatic/random generation on every page load
     } catch (err) {
       console.error("Error loading dashboard data:", err)
     } finally {
       setLoading(false)
+      setLastUpdated(new Date())
     }
   }
 
-  const generateAIInsights = async (courseData: CourseWithStats[], enrollmentStats: any) => {
-    try {
-      if (courseData.length === 0) return
-
-      // Calculate actual total sections and lessons across all courses
-      let totalSections = 0
-      let totalLessons = 0
-      
-      await Promise.all(
-        courseData.map(async (course) => {
-          const { data: sections } = await supabase
-            .from("course_sections")
-            .select("id")
-            .eq("course_id", course.id)
-
-          const sectionIds = (sections || []).map((s) => s.id)
-          totalSections += sectionIds.length
-
-          if (sectionIds.length > 0) {
-            const { count } = await supabase
-              .from("course_lessons")
-              .select("*", { count: "exact", head: true })
-              .in("section_id", sectionIds)
-            
-            totalLessons += count || 0
-          }
-        })
-      )
-
-      const response = await fetch("/api/ai/educator/student-insights", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          courseData: {
-            title: "Overall Teaching Performance",
-            totalCourses: courseData.length,
-            totalSections,
-            totalLessons,
-            averagePrice: Math.round(courseData.reduce((sum, c) => sum + (c.price || 0), 0) / courseData.length),
-            publishedCourses: courseData.filter(c => c.status === "published").length,
-          },
-          enrollmentStats,
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          setAiInsights(data.insights)
-        }
-      }
-    } catch (err) {
-      console.error("Error generating AI insights:", err)
-    }
-  }
 
   if (loading) {
     return (
@@ -237,10 +220,28 @@ export default function EducatorDashboard() {
     <EducatorLayout>
       <header className="sticky top-0 z-30 bg-background border-b-4 border-border">
         <div className="px-6 py-5 flex items-center justify-between">
-          <h1 className="text-3xl font-heading">Educator Dashboard</h1>
+          <div>
+            <h1 className="text-3xl font-heading">Educator Dashboard</h1>
+            <p className="text-sm text-foreground/70 font-base mt-1">
+              Real-time analytics and student progress tracking
+            </p>
+          </div>
           <div className="flex gap-3">
+            <NButton 
+              variant="neutral" 
+              size="lg" 
+              onClick={() => loadDashboardData()}
+              disabled={loading}
+            >
+              <TrendingUp className="w-5 h-5 mr-2" />
+              {loading ? "Refreshing..." : "Refresh Stats"}
+            </NButton>
             {courses.length > 0 && (
-              <NButton variant="accent" size="lg" onClick={() => setShowAI(true)}>
+              <NButton 
+                variant="accent" 
+                size="lg" 
+                onClick={() => setShowAI(true)}
+              >
                 <Sparkles className="w-5 h-5 mr-2" />
                 AI Insights
               </NButton>
@@ -256,51 +257,6 @@ export default function EducatorDashboard() {
       </header>
 
       <main className="p-6 space-y-8">
-        {/* AI Insights Banner */}
-        {aiInsights && aiInsights.insights && aiInsights.insights.length > 0 && (
-          <NCard className="p-6 bg-gradient-to-br from-main/5 to-accent/5 border-main/30">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-main border-2 border-border rounded-base flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-6 h-6 text-main-foreground" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-heading mb-2 flex items-center gap-2">
-                  AI-Powered Insights
-                  <span className={`text-xs px-2 py-1 rounded-base ${
-                    aiInsights.overallHealth === 'excellent' ? 'bg-success/20 text-success' :
-                    aiInsights.overallHealth === 'good' ? 'bg-main/20 text-main' :
-                    'bg-amber-100 text-amber-700'
-                  }`}>
-                    {aiInsights.overallHealth?.replace('_', ' ').toUpperCase()}
-                  </span>
-                </h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {aiInsights.insights.slice(0, 2).map((insight: any, idx: number) => (
-                    <div key={idx} className="flex items-start gap-2 p-3 bg-white rounded-base border-2 border-border">
-                      {insight.type === 'strength' ? (
-                        <Lightbulb className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
-                      ) : insight.type === 'concern' ? (
-                        <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
-                      ) : (
-                        <TrendingUp className="w-4 h-4 text-main flex-shrink-0 mt-0.5" />
-                      )}
-                      <div>
-                        <p className="text-sm font-heading">{insight.title}</p>
-                        <p className="text-xs text-foreground/70 font-base line-clamp-2">{insight.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4">
-                  <NButton variant="neutral" size="sm" onClick={() => setShowAI(true)}>
-                    View All Insights & Recommendations
-                  </NButton>
-                </div>
-              </div>
-            </div>
-          </NCard>
-        )}
-
         {/* Stats Grid */}
         <div className="grid md:grid-cols-4 gap-6">
           <NCard className="p-6 hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all">
@@ -370,10 +326,19 @@ export default function EducatorDashboard() {
             {/* Student Status Distribution - Pie Chart */}
             <NCard className="p-6">
               <div className="mb-6">
-                <h3 className="text-xl font-heading mb-1">Student Status Distribution</h3>
-                <p className="text-sm text-foreground/70 font-base">
-                  Breakdown of {stats.totalStudents} enrolled students
-                </p>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-xl font-heading mb-1">Student Status Distribution</h3>
+                    <p className="text-sm text-foreground/70 font-base">
+                      Breakdown of {stats.totalStudents} enrolled students
+                    </p>
+                  </div>
+                  {lastUpdated && (
+                    <div className="text-xs text-foreground/50 font-base">
+                      Updated: {lastUpdated.toLocaleTimeString()}
+                    </div>
+                  )}
+                </div>
               </div>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>

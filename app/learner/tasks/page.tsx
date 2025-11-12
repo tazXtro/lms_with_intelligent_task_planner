@@ -222,9 +222,12 @@ export default function TaskPlannerPage() {
     }
   }
 
-  // Drag and Drop handlers
+  // Drag and Drop handlers with smooth floating effect
   const handleDragStart = (e: DragEvent<HTMLDivElement>, task: Task) => {
-    setDraggedTask(task)
+    // Set dragged task after a tiny delay to ensure smooth drag start
+    requestAnimationFrame(() => {
+      setDraggedTask(task)
+    })
     e.dataTransfer.effectAllowed = "move"
   }
 
@@ -501,11 +504,11 @@ export default function TaskPlannerPage() {
     return (
       <NCard
         key={task.id}
-        className={`p-5 group relative overflow-hidden transition-all duration-200 backdrop-blur-sm ${
+        className={`p-5 group relative overflow-hidden transition-all duration-150 backdrop-blur-sm select-none ${
           getCardStyle()
         } ${
-          isDragging ? 'opacity-50 scale-95 rotate-2' : task.status === 'in-progress' ? 'hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-300/40 dark:hover:shadow-blue-900/40' : 'hover:-translate-y-1 hover:shadow-xl'
-        } ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          isDragging ? 'opacity-50 scale-[0.97]' : task.status === 'in-progress' ? 'hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-300/40 dark:hover:shadow-blue-900/40' : 'hover:-translate-y-1 hover:shadow-xl'
+        } ${draggable ? 'cursor-grab active:cursor-grabbing touch-none' : ''}`}
         draggable={draggable}
         onDragStart={(e) => draggable && handleDragStart(e, task)}
         onDragEnd={() => setDraggedTask(null)}
@@ -513,8 +516,8 @@ export default function TaskPlannerPage() {
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-start gap-3 flex-1">
             {draggable && (
-              <div className="group-hover:text-foreground/50 transition-colors">
-                <GripVertical className="w-5 h-5 text-foreground/20 flex-shrink-0 mt-1" />
+              <div className="group-hover:text-foreground/70 transition-all duration-200 group-hover:scale-110">
+                <GripVertical className="w-5 h-5 text-foreground/30 flex-shrink-0 mt-1 group-hover:text-main" />
               </div>
             )}
             <div className={`flex-shrink-0 transition-transform duration-200 ${
@@ -784,11 +787,11 @@ export default function TaskPlannerPage() {
         onDragOver={(e) => handleDragOver(e, status)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, status)}
-        className={`transition-all duration-300 ${isDragOver ? 'scale-[1.02]' : ''}`}
+        className={`transition-all duration-300 ${isDragOver ? 'scale-[1.03] -translate-y-1' : ''}`}
       >
         {/* Column Header */}
         <div className={`mb-5 p-4 rounded-xl border-2 bg-gradient-to-br from-white to-gray-50 dark:from-secondary-background dark:to-background backdrop-blur-sm ${
-          isDragOver ? 'border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-950/30 shadow-lg scale-[1.02]' : 'border-gray-200 dark:border-border'
+          isDragOver ? 'border-blue-500 dark:border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 shadow-2xl shadow-blue-500/30 scale-[1.02] ring-4 ring-blue-400/30' : 'border-gray-200 dark:border-border'
         } transition-all duration-300`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -807,9 +810,9 @@ export default function TaskPlannerPage() {
         </div>
 
         {/* Drop Zone */}
-        <div className={`space-y-3 min-h-[400px] p-4 rounded-lg border-2 border-dashed transition-all duration-300 ${
+        <div className={`space-y-3 min-h-[400px] p-4 rounded-xl border-2 border-dashed transition-all duration-300 ${
           isDragOver 
-            ? 'border-main bg-main/5 shadow-inner' 
+            ? 'border-blue-500 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-950/30 dark:to-indigo-950/30 shadow-inner shadow-blue-500/20 scale-[1.01]' 
             : 'border-transparent bg-transparent'
         }`}>
           {columnTasks.map((task) => (
