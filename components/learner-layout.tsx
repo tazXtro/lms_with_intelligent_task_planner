@@ -14,6 +14,7 @@ import {
   Brain,
   Search,
   Calendar,
+  Mic,
 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
@@ -29,6 +30,7 @@ const navItems = [
   { href: "/learner/tasks", label: "Task Planner", icon: Clock },
   { href: "/learner/calendar", label: "Calendar", icon: Calendar },
   { href: "/learner/canvas", label: "Canvas LMS", icon: BookOpen },
+  { href: "/learner/ai-interview", label: "AI Interview", icon: Mic },
 ]
 
 export function LearnerLayout({ children }: LearnerLayoutProps) {
