@@ -91,6 +91,9 @@ export function ShaderAnimation() {
     renderer.setPixelRatio(window.devicePixelRatio)
 
     container.appendChild(renderer.domElement)
+    
+    // Ensure canvas doesn't block pointer events - set after appending to DOM
+    renderer.domElement.style.pointerEvents = 'none'
 
     // Handle window resize
     const onWindowResize = () => {
@@ -149,10 +152,11 @@ export function ShaderAnimation() {
   return (
     <div
       ref={containerRef}
-      className="w-full h-[100vh]"
+      className="absolute inset-0 w-full h-full pointer-events-none"
       style={{
         background: "#0D1426",
         overflow: "hidden",
+        pointerEvents: "none",
       }}
     />
   )

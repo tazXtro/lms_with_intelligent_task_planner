@@ -19,7 +19,7 @@ export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState("home")
   const [isScrolling, setIsScrolling] = useState(false)
-  const scrollTimeout = useRef<NodeJS.Timeout>()
+  const scrollTimeout = useRef<NodeJS.Timeout | null>(null)
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -254,34 +254,36 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section id="home" className="relative flex h-[100vh] w-full flex-col items-center justify-center overflow-hidden">
         <ShaderAnimation />
-        <div className="absolute pointer-events-none z-10 text-center px-4">
-          <h1 className="text-5xl md:text-7xl leading-none font-semibold tracking-tighter text-white mb-6">
-            Learn Smarter,
-            <br />
-            Not Harder
-          </h1>
-          <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto mb-8">
-            DigiGyan combines world-class courses with AI-powered task planning
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pointer-events-auto">
-            {user ? (
-              <Link href={profile?.role === 'educator' ? '/educator/dashboard' : '/learner/dashboard'}>
-                <Button size="lg" className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white text-base font-semibold shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-300">
-                  Go to Dashboard <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </Link>
-            ) : (
-              <>
-                <Link href="/auth">
+        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center px-4" style={{ pointerEvents: 'none' }}>
+          <div className="text-center flex flex-col items-center">
+            <h1 className="text-5xl md:text-7xl leading-none font-semibold tracking-tighter text-white mb-6">
+              Learn Smarter,
+              <br />
+              Not Harder
+            </h1>
+            <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto mb-8">
+              DigiGyan combines world-class courses with AI-powered task planning
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center" style={{ pointerEvents: 'auto' }}>
+              {user ? (
+                <Link href={profile?.role === 'educator' ? '/educator/dashboard' : '/learner/dashboard'}>
                   <Button size="lg" className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white text-base font-semibold shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-300">
-                    Start Learning Free <ArrowRight className="ml-2 w-5 h-5" />
+                    Go to Dashboard <ArrowRight className="ml-2 w-5 h-5" />
                   </Button>
                 </Link>
-                <Button size="lg" variant="outline" className="text-base border-white/30 bg-white/5 text-white hover:bg-white/10 hover:border-white/50 backdrop-blur-sm transition-all duration-300">
-                  Explore Courses
-                </Button>
-              </>
-            )}
+              ) : (
+                <>
+                  <Link href="/auth">
+                    <Button size="lg" className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white text-base font-semibold shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-300">
+                      Start Learning Free <ArrowRight className="ml-2 w-5 h-5" />
+                    </Button>
+                  </Link>
+                  <Button size="lg" variant="outline" className="text-base border-white/30 bg-white/5 text-white hover:bg-white/10 hover:border-white/50 backdrop-blur-sm transition-all duration-300">
+                    Explore Courses
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </section>
