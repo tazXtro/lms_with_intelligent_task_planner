@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { NButton } from "@/components/ui/nbutton"
 import { NCard } from "@/components/ui/ncard"
+import { createClient } from "@/utils/supabase/client"
 import {
   Mic,
   MicOff,
@@ -24,6 +25,7 @@ import { useTextToSpeech } from "@/hooks/use-text-to-speech"
 
 interface AIInterviewModalProps {
   jobDescription: string
+  sessionId: string
   onClose: () => void
   onComplete: (sessionId: string) => void
 }
@@ -36,6 +38,7 @@ interface Message {
 
 export function AIInterviewModal({
   jobDescription,
+  sessionId,
   onClose,
   onComplete,
 }: AIInterviewModalProps) {
@@ -44,10 +47,11 @@ export function AIInterviewModal({
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [interviewStage, setInterviewStage] = useState<"starting" | "ongoing" | "completed">("starting")
-  const [sessionId, setSessionId] = useState<string | null>(null)
   const [audioEnabled, setAudioEnabled] = useState(true)
+  const [firstMessageSpoken, setFirstMessageSpoken] = useState(false)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const supabase = createClient()
   
   const {
     transcript,
@@ -68,6 +72,7 @@ export function AIInterviewModal({
     isPaused,
     isSupported: isTextToSpeechSupported,
     error: ttsError,
+    voicesLoaded,
   } = useTextToSpeech()
 
   // Auto-scroll to bottom when new messages arrive
@@ -79,6 +84,19 @@ export function AIInterviewModal({
   useEffect(() => {
     setCurrentAnswer(transcript)
   }, [transcript])
+
+  // Speak the first message once TTS is ready
+  useEffect(() => {
+    if (!firstMessageSpoken && 
+        messages.length > 0 && 
+        messages[0].role === "assistant" && 
+        audioEnabled && 
+        isTextToSpeechSupported && 
+        voicesLoaded) {
+      speak(messages[0].content)
+      setFirstMessageSpoken(true)
+    }
+  }, [messages, audioEnabled, isTextToSpeechSupported, voicesLoaded, firstMessageSpoken, speak])
 
   // Start the interview when modal opens
   useEffect(() => {
@@ -116,10 +134,17 @@ export function AIInterviewModal({
       setMessages([interviewerMessage])
       setInterviewStage("ongoing")
 
-      // Speak the first message if audio is enabled
-      if (audioEnabled && isTextToSpeechSupported) {
-        speak(data.message)
-      }
+      // Save first message to database
+      await supabase
+        .from("interview_sessions")
+        .update({
+          conversation_history: [{
+            role: "assistant",
+            content: data.message,
+          }],
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", sessionId)
 
     } catch (err) {
       console.error("Error starting interview:", err)
@@ -200,6 +225,20 @@ export function AIInterviewModal({
       }
 
       setMessages((prev) => [...prev, interviewerMessage])
+
+      // Save conversation history to database
+      const updatedHistory = [...conversationHistory, {
+        role: "assistant",
+        content: data.message,
+      }]
+      
+      await supabase
+        .from("interview_sessions")
+        .update({
+          conversation_history: updatedHistory,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", sessionId)
 
       // Check if interview is completed
       if (data.stage === "completed") {

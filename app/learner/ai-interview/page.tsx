@@ -433,6 +433,7 @@ export default function AIInterviewPage() {
       {showModal && currentSessionId && (
         <AIInterviewModal
           jobDescription={jobDescription}
+          sessionId={currentSessionId}
           onClose={() => setShowModal(false)}
           onComplete={handleInterviewComplete}
         />

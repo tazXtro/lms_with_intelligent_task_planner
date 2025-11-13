@@ -12,6 +12,7 @@ interface UseTextToSpeechReturn {
   isSupported: boolean
   voices: SpeechSynthesisVoice[]
   error: string | null
+  voicesLoaded: boolean
 }
 
 interface SpeechOptions {
@@ -26,6 +27,7 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
   const [isPaused, setIsPaused] = useState(false)
   const [isSupported, setIsSupported] = useState(false)
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
+  const [voicesLoaded, setVoicesLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
@@ -38,24 +40,43 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
       // Load voices
       const loadVoices = () => {
         const availableVoices = window.speechSynthesis.getVoices()
-        setVoices(availableVoices)
+        if (availableVoices.length > 0) {
+          setVoices(availableVoices)
+          setVoicesLoaded(true)
+        }
       }
 
+      // Try loading immediately
       loadVoices()
       
       // Chrome loads voices asynchronously
       if (window.speechSynthesis.onvoiceschanged !== undefined) {
         window.speechSynthesis.onvoiceschanged = loadVoices
       }
+
+      // Fallback: Keep trying to load voices for up to 2 seconds
+      const voiceCheckInterval = setInterval(() => {
+        const availableVoices = window.speechSynthesis.getVoices()
+        if (availableVoices.length > 0) {
+          setVoices(availableVoices)
+          setVoicesLoaded(true)
+          clearInterval(voiceCheckInterval)
+        }
+      }, 100)
+
+      const timeoutId = setTimeout(() => clearInterval(voiceCheckInterval), 2000)
+
+      // Cleanup function
+      return () => {
+        clearInterval(voiceCheckInterval)
+        clearTimeout(timeoutId)
+        if (window.speechSynthesis) {
+          window.speechSynthesis.cancel()
+        }
+      }
     } else {
       setIsSupported(false)
       setError("Text-to-speech is not supported in this browser")
-    }
-
-    return () => {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel()
-      }
     }
   }, [])
 
@@ -66,29 +87,34 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
         return
       }
 
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel()
+      const performSpeech = () => {
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel()
 
-      const utterance = new SpeechSynthesisUtterance(text)
-      
-      // Apply options
-      if (options?.voice) {
-        utterance.voice = options.voice
-      } else {
-        // Try to select a good default English voice
-        const englishVoice = voices.find(
-          (voice) =>
-            voice.lang.startsWith("en") &&
-            (voice.name.includes("Female") || voice.name.includes("Google"))
-        )
-        if (englishVoice) {
-          utterance.voice = englishVoice
+        const utterance = new SpeechSynthesisUtterance(text)
+        
+        // Apply options
+        if (options?.voice) {
+          utterance.voice = options.voice
+        } else {
+          // Ensure voices are loaded (fix for async voice loading)
+          const currentVoices = window.speechSynthesis.getVoices()
+          
+          // Try to select a good default English voice
+          const englishVoice = currentVoices.find(
+            (voice) =>
+              voice.lang.startsWith("en") &&
+              (voice.name.includes("Female") || voice.name.includes("Google") || voice.name.includes("Natural"))
+          ) || currentVoices.find((voice) => voice.lang.startsWith("en")) // Fallback to any English voice
+          
+          if (englishVoice) {
+            utterance.voice = englishVoice
+          }
         }
-      }
-      
-      utterance.rate = options?.rate ?? 0.9 // Slightly slower for clarity
-      utterance.pitch = options?.pitch ?? 1.0
-      utterance.volume = options?.volume ?? 1.0
+        
+        utterance.rate = options?.rate ?? 0.9 // Slightly slower for clarity
+        utterance.pitch = options?.pitch ?? 1.0
+        utterance.volume = options?.volume ?? 1.0
 
       utterance.onstart = () => {
         setIsSpeaking(true)
@@ -102,26 +128,47 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
         utteranceRef.current = null
       }
 
-      utterance.onerror = (event) => {
-        console.error("Speech synthesis error:", event)
-        setError(`Speech error: ${event.error}`)
-        setIsSpeaking(false)
-        setIsPaused(false)
-        utteranceRef.current = null
+        utterance.onerror = (event) => {
+          console.error("Speech synthesis error:", event)
+          setError(`Speech error: ${event.error}`)
+          setIsSpeaking(false)
+          setIsPaused(false)
+          utteranceRef.current = null
+        }
+
+        utterance.onpause = () => {
+          setIsPaused(true)
+        }
+
+        utterance.onresume = () => {
+          setIsPaused(false)
+        }
+
+        utteranceRef.current = utterance
+        window.speechSynthesis.speak(utterance)
       }
 
-      utterance.onpause = () => {
-        setIsPaused(true)
+      // Wait for voices to be loaded before speaking
+      if (voicesLoaded) {
+        performSpeech()
+      } else {
+        // Wait up to 2 seconds for voices to load
+        let attempts = 0
+        const maxAttempts = 20
+        const checkInterval = setInterval(() => {
+          attempts++
+          const currentVoices = window.speechSynthesis.getVoices()
+          if (currentVoices.length > 0) {
+            clearInterval(checkInterval)
+            performSpeech()
+          } else if (attempts >= maxAttempts) {
+            clearInterval(checkInterval)
+            performSpeech() // Speak anyway, browser will use default voice
+          }
+        }, 100)
       }
-
-      utterance.onresume = () => {
-        setIsPaused(false)
-      }
-
-      utteranceRef.current = utterance
-      window.speechSynthesis.speak(utterance)
     },
-    [isSupported, voices]
+    [isSupported, voicesLoaded]
   )
 
   const cancel = useCallback(() => {
@@ -157,6 +204,7 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
     isSupported,
     voices,
     error,
+    voicesLoaded,
   }
 }
 

@@ -85,7 +85,7 @@ Begin the interview with a professional greeting and your first question based o
           "X-Title": "DigiGyan LMS - AI Interview"
         },
         body: JSON.stringify({
-          model: "deepseek/deepseek-r1-0528:free",
+          model: "meta-llama/llama-3.3-70b-instruct:free",
           messages: [
             {
               role: "system",
@@ -230,43 +230,74 @@ Remember: Keep it conversational and natural, like a real interviewer.`
         )
       }
 
-      const systemPrompt = `You are an expert interview evaluator. Analyze the interview conversation and provide comprehensive, constructive feedback in JSON format.
+      const systemPrompt = `You are an expert interview evaluator with HIGH STANDARDS. You must provide REALISTIC and CRITICAL assessment based on actual interview performance. Be HONEST and RIGOROUS in your evaluation.
 
-CRITICAL: Return ONLY a valid JSON object with no additional text or markdown formatting.
+CRITICAL EVALUATION CRITERIA - You MUST strictly assess:
 
-Evaluate the candidate's performance across multiple dimensions and provide actionable feedback.
+1. **ANSWER QUALITY & DEPTH**:
+   - SHORT answers (1-3 words) should receive LOW scores (0-30)
+   - VAGUE or GENERIC answers should receive MEDIUM-LOW scores (30-50)
+   - Answers lacking specific examples or details: MEDIUM scores (50-70)
+   - Comprehensive answers with examples: HIGHER scores (70-85)
+   - Exceptional answers with depth and insight: HIGH scores (85-100)
 
-Return your response as a JSON object with this EXACT structure:
+2. **RELEVANCE TO QUESTION**:
+   - IRRELEVANT or OFF-TOPIC answers: FAIL that response (score 0-20)
+   - Partially relevant answers: LOW scores (20-40)
+   - Answers must DIRECTLY address what was asked
+
+3. **TECHNICAL ACCURACY** (if technical role):
+   - INCORRECT technical information: Major penalty (reduce score by 20-40)
+   - Missing technical details when expected: Penalty (reduce score by 10-20)
+   - Correct but superficial: MEDIUM scores (50-65)
+
+4. **COMMUNICATION QUALITY**:
+   - Unclear or incoherent responses: LOW scores (20-40)
+   - One-word or minimal responses: VERY LOW scores (0-30)
+   - Well-structured, clear communication: GOOD scores (70-85)
+
+5. **OVERALL PERFORMANCE**:
+   - If candidate gave MOSTLY short/irrelevant answers: Overall score 0-40
+   - If candidate gave SOME good answers mixed with poor ones: 40-60
+   - If candidate gave MOSTLY adequate answers: 60-75
+   - If candidate gave MOSTLY good answers: 75-85
+   - If candidate gave CONSISTENTLY excellent answers: 85-100
+
+**BE CRITICAL**: DO NOT give high scores unless truly earned. Most real interviews result in scores between 40-75. Scores above 85 should be RARE and only for exceptional performance.
+
+RETURN ONLY a valid JSON object with this EXACT structure:
 {
-  "overallScore": 85,
-  "overallFeedback": "Brief 2-3 sentence overall assessment",
+  "overallScore": 65,
+  "overallFeedback": "Honest 2-3 sentence assessment explaining the score",
   "strengths": [
-    "Specific strength 1",
+    "Specific strength 1 (or 'Limited strengths observed' if poor performance)",
     "Specific strength 2",
     "Specific strength 3"
   ],
   "areasForImprovement": [
-    "Specific area 1 with actionable advice",
-    "Specific area 2 with actionable advice",
-    "Specific area 3 with actionable advice"
+    "Specific critical area 1 with actionable advice",
+    "Specific critical area 2 with actionable advice",
+    "Specific critical area 3 with actionable advice"
   ],
   "skillsAssessment": {
-    "technical": { "score": 80, "feedback": "Brief assessment" },
-    "communication": { "score": 90, "feedback": "Brief assessment" },
-    "problemSolving": { "score": 75, "feedback": "Brief assessment" },
-    "experience": { "score": 85, "feedback": "Brief assessment" }
+    "technical": { "score": 60, "feedback": "Honest assessment - mention if answers were too short or lacked depth" },
+    "communication": { "score": 55, "feedback": "Honest assessment - mention if answers were unclear or minimal" },
+    "problemSolving": { "score": 50, "feedback": "Honest assessment - mention if examples were missing or vague" },
+    "experience": { "score": 45, "feedback": "Honest assessment - mention if answers lacked specific examples" }
   },
   "recommendations": [
-    "Actionable recommendation 1",
-    "Actionable recommendation 2",
-    "Actionable recommendation 3"
+    "Critical recommendation 1 addressing main weakness",
+    "Critical recommendation 2",
+    "Critical recommendation 3"
   ],
-  "interviewQuality": "excellent",
-  "readinessLevel": "ready"
+  "interviewQuality": "fair",
+  "readinessLevel": "needs_practice"
 }
 
 interviewQuality options: "excellent", "good", "fair", "needs_improvement"
-readinessLevel options: "ready", "almost_ready", "needs_practice", "needs_significant_work"`
+readinessLevel options: "ready", "almost_ready", "needs_practice", "needs_significant_work"
+
+REMEMBER: Be HONEST, CRITICAL, and REALISTIC. Low scores are NORMAL for candidates who give short, irrelevant, or poor quality answers.`
 
       const userPrompt = `Job Description:
 ${jobDescription}
