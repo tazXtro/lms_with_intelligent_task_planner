@@ -35,6 +35,7 @@ export default function SettingsPage() {
     fetchCalendarSettings()
     fetchUserEmail()
     fetchCanvasSettings()
+    fetchNotificationPreferences()
   }, [])
 
   const fetchUserEmail = async () => {
@@ -46,6 +47,47 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Error fetching user email:', error)
+    }
+  }
+
+  const fetchNotificationPreferences = async () => {
+    try {
+      const response = await fetch('/api/notifications/preferences')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.preferences) {
+          setRemindersEnabled(data.preferences.reminders_enabled)
+          setReminderTiming(data.preferences.reminder_timing)
+          setEmailNotifications(data.preferences.email_notifications)
+          setPushNotifications(data.preferences.push_notifications)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching notification preferences:', error)
+    }
+  }
+
+  const saveNotificationPreferences = async () => {
+    try {
+      const response = await fetch('/api/notifications/preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reminders_enabled: remindersEnabled,
+          reminder_timing: reminderTiming,
+          email_notifications: emailNotifications,
+          push_notifications: pushNotifications,
+        }),
+      })
+
+      if (response.ok) {
+        alert('✅ Notification preferences saved successfully!')
+      } else {
+        throw new Error('Failed to save preferences')
+      }
+    } catch (error) {
+      console.error('Error saving notification preferences:', error)
+      alert('❌ Failed to save preferences. Please try again.')
     }
   }
 
@@ -766,8 +808,10 @@ export default function SettingsPage() {
 
             {/* Save Button */}
             <div className="flex gap-3">
-              <NButton variant="default" size="lg">Save Changes</NButton>
-              <NButton variant="neutral" size="lg">
+              <NButton onClick={saveNotificationPreferences} variant="default" size="lg">
+                Save Changes
+              </NButton>
+              <NButton onClick={fetchNotificationPreferences} variant="neutral" size="lg">
                 Cancel
               </NButton>
             </div>

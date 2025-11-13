@@ -109,12 +109,27 @@ export async function POST(request: Request) {
         const calendarService = await initGoogleCalendarService()
         
         if (calendarService) {
+          // Fetch user's notification preferences
+          const { data: notificationPrefs } = await supabase
+            .from('notification_preferences')
+            .select('reminders_enabled, reminder_timing, email_notifications')
+            .eq('user_id', user.id)
+            .single()
+
+          // Prepare reminder settings for Google Calendar
+          const reminderSettings = notificationPrefs ? {
+            enabled: notificationPrefs.reminders_enabled,
+            timing: notificationPrefs.reminder_timing,
+            emailEnabled: notificationPrefs.email_notifications,
+          } : undefined
+
           const eventId = await calendarService.createTaskEvent(
             calendarSettings.google_calendar_id,
             task.title,
             task.description,
             task.due_date,
-            task.priority
+            task.priority,
+            reminderSettings
           )
 
           // Store the mapping

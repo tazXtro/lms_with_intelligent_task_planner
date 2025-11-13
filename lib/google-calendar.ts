@@ -82,7 +82,8 @@ export class GoogleCalendarService {
     taskTitle: string,
     taskDescription: string | null,
     dueDate: string | null,
-    priority: 'low' | 'medium' | 'high'
+    priority: 'low' | 'medium' | 'high',
+    reminderSettings?: { enabled: boolean; timing: string; emailEnabled: boolean }
   ): Promise<string> {
     const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client })
 
@@ -106,19 +107,41 @@ export class GoogleCalendarService {
       end = { date: today }
     }
 
+    // Convert reminder timing to minutes
+    const timingToMinutes: { [key: string]: number } = {
+      '15m': 15,
+      '1h': 60,
+      '24h': 1440,
+      '3d': 4320,
+    }
+
+    // Build reminders based on user preferences
+    const reminders: any = reminderSettings?.enabled !== false ? {
+      useDefault: false,
+      overrides: [
+        // Always add popup reminder
+        { 
+          method: 'popup', 
+          minutes: reminderSettings?.timing ? timingToMinutes[reminderSettings.timing] || 1440 : 1440
+        },
+        // Add email reminder if enabled
+        ...(reminderSettings?.emailEnabled !== false ? [{
+          method: 'email',
+          minutes: reminderSettings?.timing ? timingToMinutes[reminderSettings.timing] || 1440 : 1440
+        }] : [])
+      ],
+    } : {
+      useDefault: false,
+      overrides: [],
+    }
+
     const event: CalendarEvent = {
       summary: `📚 ${taskTitle}`,
       description: taskDescription || 'DigiGyan Learning Task',
       start,
       end,
       colorId: colorMap[priority],
-      reminders: {
-        useDefault: false,
-        overrides: [
-          { method: 'popup', minutes: 60 },
-          { method: 'email', minutes: 1440 }, // 24 hours
-        ],
-      },
+      reminders,
     }
 
     try {
@@ -144,7 +167,8 @@ export class GoogleCalendarService {
     taskDescription: string | null,
     dueDate: string | null,
     priority: 'low' | 'medium' | 'high',
-    status: 'todo' | 'in-progress' | 'completed'
+    status: 'todo' | 'in-progress' | 'completed',
+    reminderSettings?: { enabled: boolean; timing: string; emailEnabled: boolean }
   ): Promise<void> {
     const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client })
 
@@ -171,19 +195,41 @@ export class GoogleCalendarService {
       end = { date: today }
     }
 
+    // Convert reminder timing to minutes
+    const timingToMinutes: { [key: string]: number } = {
+      '15m': 15,
+      '1h': 60,
+      '24h': 1440,
+      '3d': 4320,
+    }
+
+    // Build reminders based on user preferences
+    const reminders: any = reminderSettings?.enabled !== false ? {
+      useDefault: false,
+      overrides: [
+        // Always add popup reminder
+        { 
+          method: 'popup', 
+          minutes: reminderSettings?.timing ? timingToMinutes[reminderSettings.timing] || 1440 : 1440
+        },
+        // Add email reminder if enabled
+        ...(reminderSettings?.emailEnabled !== false ? [{
+          method: 'email',
+          minutes: reminderSettings?.timing ? timingToMinutes[reminderSettings.timing] || 1440 : 1440
+        }] : [])
+      ],
+    } : {
+      useDefault: false,
+      overrides: [],
+    }
+
     const event: CalendarEvent = {
       summary: `${statusEmoji[status]} ${taskTitle}`,
       description: taskDescription || 'DigiGyan Learning Task',
       start,
       end,
       colorId: colorMap[priority],
-      reminders: {
-        useDefault: false,
-        overrides: [
-          { method: 'popup', minutes: 60 },
-          { method: 'email', minutes: 1440 },
-        ],
-      },
+      reminders,
     }
 
     try {

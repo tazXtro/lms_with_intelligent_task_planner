@@ -36,6 +36,20 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
+    // Fetch user's notification preferences
+    const { data: notificationPrefs } = await supabase
+      .from('notification_preferences')
+      .select('reminders_enabled, reminder_timing, email_notifications')
+      .eq('user_id', user.id)
+      .single()
+
+    // Prepare reminder settings for Google Calendar
+    const reminderSettings = notificationPrefs ? {
+      enabled: notificationPrefs.reminders_enabled,
+      timing: notificationPrefs.reminder_timing,
+      emailEnabled: notificationPrefs.email_notifications,
+    } : undefined
+
     // Get all tasks that are not completed
     const { data: tasks, error: tasksError } = await supabase
       .from('learner_tasks')
@@ -69,7 +83,8 @@ export async function POST(request: NextRequest) {
             task.description,
             task.due_date,
             task.priority,
-            task.status
+            task.status,
+            reminderSettings
           )
 
           await supabase
@@ -85,7 +100,8 @@ export async function POST(request: NextRequest) {
             task.title,
             task.description,
             task.due_date,
-            task.priority
+            task.priority,
+            reminderSettings
           )
 
           // Store the mapping
@@ -188,6 +204,20 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 })
     }
 
+    // Fetch user's notification preferences
+    const { data: notificationPrefs } = await supabase
+      .from('notification_preferences')
+      .select('reminders_enabled, reminder_timing, email_notifications')
+      .eq('user_id', user.id)
+      .single()
+
+    // Prepare reminder settings for Google Calendar
+    const reminderSettings = notificationPrefs ? {
+      enabled: notificationPrefs.reminders_enabled,
+      timing: notificationPrefs.reminder_timing,
+      emailEnabled: notificationPrefs.email_notifications,
+    } : undefined
+
     // Check if task already has a calendar event
     const { data: existingEvent } = await supabase
       .from('task_calendar_events')
@@ -206,7 +236,8 @@ export async function PUT(request: NextRequest) {
         task.description,
         task.due_date,
         task.priority,
-        task.status
+        task.status,
+        reminderSettings
       )
 
       await supabase
@@ -224,7 +255,8 @@ export async function PUT(request: NextRequest) {
         task.title,
         task.description,
         task.due_date,
-        task.priority
+        task.priority,
+        reminderSettings
       )
 
       // Store the mapping

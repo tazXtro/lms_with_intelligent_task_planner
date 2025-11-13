@@ -63,6 +63,20 @@ export async function PATCH(
         .single()
 
       if (calendarSettings) {
+        // Fetch user's notification preferences
+        const { data: notificationPrefs } = await supabase
+          .from('notification_preferences')
+          .select('reminders_enabled, reminder_timing, email_notifications')
+          .eq('user_id', user.id)
+          .single()
+
+        // Prepare reminder settings for Google Calendar
+        const reminderSettings = notificationPrefs ? {
+          enabled: notificationPrefs.reminders_enabled,
+          timing: notificationPrefs.reminder_timing,
+          emailEnabled: notificationPrefs.email_notifications,
+        } : undefined
+
         const { data: eventMapping } = await supabase
           .from('task_calendar_events')
           .select('*')
@@ -80,7 +94,8 @@ export async function PATCH(
             task.description,
             task.due_date,
             task.priority,
-            task.status
+            task.status,
+            reminderSettings
           )
 
           await supabase
@@ -103,7 +118,8 @@ export async function PATCH(
             task.title,
             task.description,
             task.due_date,
-            task.priority
+            task.priority,
+            reminderSettings
           )
 
           await supabase
