@@ -18,7 +18,7 @@ import {
   Youtube as YoutubeIcon
 } from "lucide-react"
 import { NButton } from "./ui/nbutton"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 interface RichTextEditorProps {
   content: string
@@ -33,11 +33,28 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        bulletList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+        orderedList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+        blockquote: {
+          HTMLAttributes: {
+            class: "border-l-4 border-main pl-4 italic my-4",
+          },
+        },
+      }),
       Link.configure({
         openOnClick: false,
+        protocols: ["http", "https", "mailto"],
         HTMLAttributes: {
-          class: "text-main underline cursor-pointer",
+          class: "text-main underline cursor-pointer hover:text-main/80",
+          target: "_blank",
+          rel: "noopener noreferrer",
         },
       }),
       Image.configure({
@@ -63,16 +80,47 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
     },
   })
 
+  // Update editor content when prop changes
+  useEffect(() => {
+    if (editor) {
+      const currentHTML = editor.getHTML()
+      // Only update if content actually changed (handle both empty strings and HTML)
+      if (content !== currentHTML) {
+        editor.commands.setContent(content || "")
+      }
+    }
+  }, [content, editor])
+
   if (!editor) {
     return null
   }
 
   const addLink = () => {
     if (linkUrl) {
-      editor.chain().focus().setLink({ href: linkUrl }).run()
+      // Ensure URL has protocol
+      let url = linkUrl.trim()
+      if (!url.match(/^https?:\/\//i) && !url.match(/^mailto:/i)) {
+        url = `https://${url}`
+      }
+
+      const { from, to } = editor.state.selection
+      const selectedText = editor.state.doc.textBetween(from, to)
+
+      if (selectedText) {
+        // If text is selected, make it a link
+        editor.chain().focus().setLink({ href: url }).run()
+      } else {
+        // If no text is selected, insert the URL as a link
+        editor.chain().focus().insertContent(`<a href="${url}">${url}</a>`).run()
+      }
+      
       setLinkUrl("")
       setShowLinkInput(false)
     }
+  }
+
+  const removeLink = () => {
+    editor.chain().focus().unsetLink().run()
   }
 
   const addImage = () => {
@@ -144,7 +192,27 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
           type="button"
           variant="neutral"
           size="sm"
-          onClick={() => setShowLinkInput(!showLinkInput)}
+          onClick={() => {
+            if (editor.isActive("link")) {
+              // If link is active, remove it or show input to edit
+              const currentLink = editor.getAttributes("link")
+              if (currentLink.href) {
+                setLinkUrl(currentLink.href)
+                setShowLinkInput(true)
+              } else {
+                removeLink()
+              }
+            } else {
+              // Show input to add new link
+              const { from, to } = editor.state.selection
+              const selectedText = editor.state.doc.textBetween(from, to)
+              if (selectedText) {
+                setLinkUrl("")
+              }
+              setShowLinkInput(!showLinkInput)
+            }
+          }}
+          className={editor.isActive("link") ? "bg-main text-main-foreground" : ""}
         >
           <LinkIcon className="w-4 h-4" />
         </NButton>
@@ -219,7 +287,10 @@ export function RichTextEditor({ content, onChange, placeholder }: RichTextEdito
         </div>
       )}
 
-      <EditorContent editor={editor} className="prose max-w-none" />
+      <EditorContent 
+        editor={editor} 
+        className="prose max-w-none" 
+      />
     </div>
   )
 }

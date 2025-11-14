@@ -49,8 +49,11 @@ export function AIInterviewModal({
   const [interviewStage, setInterviewStage] = useState<"starting" | "ongoing" | "completed">("starting")
   const [audioEnabled, setAudioEnabled] = useState(true)
   const [firstMessageSpoken, setFirstMessageSpoken] = useState(false)
+  const [isManuallyEditing, setIsManuallyEditing] = useState(false)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const baseAnswerRef = useRef("") // Base text before starting a new recording (using ref to avoid infinite loops)
+  const prevIsListeningRef = useRef(false)
   const supabase = createClient()
   
   const {
@@ -80,10 +83,27 @@ export function AIInterviewModal({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  // Update current answer with transcript
+  // Update current answer with transcript (append to base answer when recording)
   useEffect(() => {
-    setCurrentAnswer(transcript)
-  }, [transcript])
+    if (isListening && !isManuallyEditing) {
+      // Append new transcript to base answer
+      const combined = baseAnswerRef.current.trim() 
+        ? `${baseAnswerRef.current.trim()} ${transcript}`.trim()
+        : transcript
+      setCurrentAnswer(combined)
+    } else if (!isListening && prevIsListeningRef.current && transcript && !isManuallyEditing) {
+      // When recording stops (transition from listening to not listening), append final transcript
+      const combined = baseAnswerRef.current.trim()
+        ? `${baseAnswerRef.current.trim()} ${transcript}`.trim()
+        : transcript
+      setCurrentAnswer(combined)
+      // Update base answer ref to include the new transcript (only once when recording stops)
+      baseAnswerRef.current = combined
+    }
+    
+    // Track previous listening state
+    prevIsListeningRef.current = isListening
+  }, [transcript, isListening, isManuallyEditing])
 
   // Speak the first message once TTS is ready
   useEffect(() => {
@@ -165,8 +185,10 @@ export function AIInterviewModal({
       cancelSpeech()
     }
 
+    // Save current answer as base before starting new recording
+    baseAnswerRef.current = currentAnswer.trim()
     resetTranscript()
-    setCurrentAnswer("")
+    setIsManuallyEditing(false)
     setError(null)
     startListening()
   }
@@ -189,6 +211,8 @@ export function AIInterviewModal({
 
     setMessages((prev) => [...prev, userMessage])
     setCurrentAnswer("")
+    baseAnswerRef.current = ""
+    setIsManuallyEditing(false)
     resetTranscript()
     setIsProcessing(true)
     setError(null)
@@ -408,31 +432,30 @@ export function AIInterviewModal({
               </div>
             )}
 
-            {/* Current Answer Display */}
-            {currentAnswer && (
-              <div className="mb-4">
-                <label className="block text-sm font-heading mb-2 text-foreground/70">
-                  Your Answer:
-                </label>
-                <div className="p-4 bg-white border-2 border-border rounded-base">
-                  <p className="text-sm font-base whitespace-pre-wrap">
-                    {currentAnswer}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Manual Input (fallback) */}
-            {!isSpeechToTextSupported && (
-              <div className="mb-4">
-                <textarea
-                  value={currentAnswer}
-                  onChange={(e) => setCurrentAnswer(e.target.value)}
-                  placeholder="Type your answer here..."
-                  className="w-full px-4 py-3 rounded-base border-2 border-border bg-white font-base text-sm focus:outline-none focus:border-main transition-colors min-h-[120px]"
-                />
-              </div>
-            )}
+            {/* Editable Answer Input */}
+            <div className="mb-4">
+              <label className="block text-sm font-heading mb-2 text-foreground/70">
+                Your Answer:
+              </label>
+              <textarea
+                value={currentAnswer}
+                onChange={(e) => {
+                  setCurrentAnswer(e.target.value)
+                  setIsManuallyEditing(true)
+                  // Update base answer ref when manually editing so it stays in sync
+                  baseAnswerRef.current = e.target.value.trim()
+                }}
+                onFocus={() => setIsManuallyEditing(true)}
+                placeholder={isSpeechToTextSupported ? "Type your answer here or use voice recording..." : "Type your answer here..."}
+                className="w-full px-4 py-3 rounded-base border-2 border-border bg-white font-base text-sm focus:outline-none focus:border-main transition-colors min-h-[120px] resize-y"
+                disabled={isProcessing || isListening}
+              />
+              {isSpeechToTextSupported && currentAnswer && (
+                <p className="text-xs text-foreground/50 mt-2 font-base">
+                  💡 You can edit your answer before submitting
+                </p>
+              )}
+            </div>
 
             {/* Controls */}
             <div className="flex gap-3">

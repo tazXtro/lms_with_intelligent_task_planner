@@ -7,6 +7,7 @@ import { NCard } from "@/components/ui/ncard"
 import { NLabel } from "@/components/ui/nlabel"
 import { AIInterviewModal } from "@/components/ai-interview-modal"
 import { AIInterviewFeedback } from "@/components/ai-interview-feedback"
+import { InterviewFileUpload } from "@/components/interview-file-upload"
 import { createClient } from "@/utils/supabase/client"
 import {
   Mic,
@@ -23,6 +24,7 @@ import {
   Award,
   ChevronRight,
   AlertCircle,
+  Upload,
 } from "lucide-react"
 
 interface InterviewSession {
@@ -36,6 +38,7 @@ interface InterviewSession {
 
 export default function AIInterviewPage() {
   const [jobDescription, setJobDescription] = useState("")
+  const [extractedText, setExtractedText] = useState("")
   const [jobTitle, setJobTitle] = useState("")
   const [companyName, setCompanyName] = useState("")
   const [showModal, setShowModal] = useState(false)
@@ -67,9 +70,41 @@ export default function AIInterviewPage() {
     }
   }
 
+  const handleTextExtracted = (text: string, fileName: string) => {
+    setExtractedText((prev) => {
+      const newText = prev ? `${prev}\n\n--- Extracted from ${fileName} ---\n\n${text}` : `--- Extracted from ${fileName} ---\n\n${text}`
+      // Auto-populate the textarea if it's empty (show preview)
+      if (!jobDescription.trim()) {
+        setJobDescription(newText)
+      }
+      return newText
+    })
+  }
+
+  const handleFileError = (errorMessage: string) => {
+    setError(errorMessage)
+  }
+
   const handleStartInterview = async () => {
-    if (!jobDescription.trim()) {
-      setError("Please paste the job description to begin")
+    // Combine manual text input with extracted text from files
+    // If jobDescription was auto-populated from extractedText, it will already contain that text
+    // So we check if extractedText is different from what's in jobDescription before combining
+    let combinedText = jobDescription.trim()
+    
+    // If we have extracted text that's not already in jobDescription, append it
+    if (extractedText.trim() && !combinedText.includes(extractedText.trim())) {
+      combinedText = combinedText 
+        ? `${combinedText}\n\n--- Additional Information from Files ---\n\n${extractedText.trim()}`
+        : extractedText.trim()
+    }
+    
+    // Fallback to extractedText if jobDescription is empty
+    if (!combinedText.trim() && extractedText.trim()) {
+      combinedText = extractedText.trim()
+    }
+
+    if (!combinedText.trim()) {
+      setError("Please paste the job description or upload an image file to begin")
       return
     }
 
@@ -88,7 +123,7 @@ export default function AIInterviewPage() {
         .from("interview_sessions")
         .insert({
           user_id: user.id,
-          job_description: jobDescription,
+          job_description: combinedText,
           job_title: jobTitle || null,
           company_name: companyName || null,
           status: "in_progress",
@@ -118,6 +153,7 @@ export default function AIInterviewPage() {
     setShowFeedback(false)
     setCurrentSessionId(null)
     setJobDescription("")
+    setExtractedText("")
     setJobTitle("")
     setCompanyName("")
     loadPastSessions()
@@ -238,15 +274,43 @@ export default function AIInterviewPage() {
                   <NLabel htmlFor="job-description">
                     Job Description / Requirements *
                   </NLabel>
-                  <textarea
-                    id="job-description"
-                    value={jobDescription}
-                    onChange={(e) => setJobDescription(e.target.value)}
-                    placeholder="Paste the complete job description here. Include responsibilities, requirements, qualifications, and any other details from the job posting..."
-                    className="w-full px-5 py-3 rounded-base border-2 border-border bg-background font-base text-sm focus:outline-none focus:border-main transition-colors min-h-[200px] resize-y"
-                  />
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-xs text-foreground/60 font-base mb-2">
+                      <span className="flex-1 border-t border-border"></span>
+                      <span>OR</span>
+                      <span className="flex-1 border-t border-border"></span>
+                    </div>
+                    
+                    {/* File Upload Section */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Upload className="w-4 h-4 text-main" />
+                        <span className="text-sm font-heading">Upload Image</span>
+                      </div>
+                      <InterviewFileUpload
+                        onTextExtracted={handleTextExtracted}
+                        onError={handleFileError}
+                        maxSize={10 * 1024 * 1024} // 10MB
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs text-foreground/60 font-base">
+                      <span className="flex-1 border-t border-border"></span>
+                      <span>OR</span>
+                      <span className="flex-1 border-t border-border"></span>
+                    </div>
+
+                    {/* Manual Text Input */}
+                    <textarea
+                      id="job-description"
+                      value={jobDescription}
+                      onChange={(e) => setJobDescription(e.target.value)}
+                      placeholder="Paste the complete job description here. Include responsibilities, requirements, qualifications, and any other details from the job posting..."
+                      className="w-full px-5 py-3 rounded-base border-2 border-border bg-background font-base text-sm focus:outline-none focus:border-main transition-colors min-h-[200px] resize-y"
+                    />
+                  </div>
                   <p className="text-xs text-foreground/50 mt-2 font-base">
-                    The more detailed the job description, the more relevant the interview questions will be
+                    The more detailed the job description, the more relevant the interview questions will be. You can upload an image or paste text manually.
                   </p>
                 </div>
 
@@ -259,7 +323,7 @@ export default function AIInterviewPage() {
 
                 <NButton
                   onClick={handleStartInterview}
-                  disabled={!jobDescription.trim() || loading}
+                  disabled={(!jobDescription.trim() && !extractedText.trim()) || loading}
                   variant="default"
                   size="lg"
                   className="w-full"
@@ -432,7 +496,7 @@ export default function AIInterviewPage() {
       {/* Interview Modal */}
       {showModal && currentSessionId && (
         <AIInterviewModal
-          jobDescription={jobDescription}
+          jobDescription={[jobDescription.trim(), extractedText.trim()].filter(Boolean).join("\n\n--- Additional Information ---\n\n")}
           sessionId={currentSessionId}
           onClose={() => setShowModal(false)}
           onComplete={handleInterviewComplete}

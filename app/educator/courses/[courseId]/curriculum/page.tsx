@@ -292,6 +292,72 @@ export default function CurriculumBuilderPage() {
     }
   }
 
+  const convertTextToHTML = (text: string): string => {
+    if (!text || !text.trim()) return ""
+    
+    // Convert plain text to HTML, preserving line breaks
+    // Split by double newlines for paragraphs, single newlines for line breaks
+    const trimmedText = text.trim()
+    
+    // If text contains double newlines, split into paragraphs
+    if (trimmedText.includes("\n\n") || trimmedText.includes("\r\n\r\n")) {
+      const paragraphs = trimmedText.split(/\n\s*\n|\r\n\s*\r\n/).filter(p => p.trim())
+      if (paragraphs.length === 0) return ""
+      
+      return paragraphs
+        .map(paragraph => {
+          // Replace single newlines within paragraphs with <br>
+          const htmlParagraph = paragraph
+            .split(/\n|\r\n/)
+            .map(line => line.trim())
+            .filter(line => line.length > 0)
+            .join("<br>")
+          return `<p>${htmlParagraph}</p>`
+        })
+        .join("")
+    } else {
+      // Single paragraph - replace single newlines with <br>
+      const htmlParagraph = trimmedText
+        .split(/\n|\r\n/)
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join("<br>")
+      return `<p>${htmlParagraph}</p>`
+    }
+  }
+
+  const convertHTMLToText = (html: string): string => {
+    if (!html || !html.trim()) return ""
+    
+    // Create a temporary DOM element to parse HTML
+    const tempDiv = document.createElement("div")
+    tempDiv.innerHTML = html
+    
+    // Extract text content and preserve line breaks
+    // Replace <p> tags with double newlines, <br> with single newlines
+    let text = tempDiv.innerText || tempDiv.textContent || ""
+    
+    // If HTML contains <p> tags, preserve paragraph structure
+    if (html.includes("<p>")) {
+      // Split by </p> and extract text from each paragraph
+      const paragraphs = html.match(/<p[^>]*>([\s\S]*?)<\/p>/g) || []
+      if (paragraphs.length > 0) {
+        text = paragraphs
+          .map(p => {
+            const content = p.replace(/<p[^>]*>|<\/p>/g, "")
+            return content.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").trim()
+          })
+          .filter(p => p.length > 0)
+          .join("\n\n")
+      }
+    } else {
+      // Handle <br> tags
+      text = text.replace(/\n\n+/g, "\n\n") // Normalize multiple newlines
+    }
+    
+    return text.trim()
+  }
+
   const handleEnhanceLessonContent = () => {
     if (!lessonContent.trim()) {
       alert("Please add some lesson content first")
@@ -314,7 +380,11 @@ export default function CurriculumBuilderPage() {
 
   const handleEnhancedContentApply = (enhanced: any) => {
     if (typeof enhanced === 'string') {
-      setLessonContent(enhanced)
+      // Convert plain text to HTML format for RichTextEditor if it's not already HTML
+      const htmlContent = !enhanced.trim().startsWith("<") 
+        ? convertTextToHTML(enhanced)
+        : enhanced
+      setLessonContent(htmlContent)
     }
     setShowAI(false)
   }
@@ -758,9 +828,15 @@ export default function CurriculumBuilderPage() {
           onApply={aiMode === "assessment-generator" ? handleAssessmentApply : handleEnhancedContentApply}
           initialData={
             aiMode === "assessment-generator"
-              ? { content: lessonContent, title: lessonTitle }
+              ? { 
+                  content: convertHTMLToText(lessonContent), 
+                  title: lessonTitle 
+                }
               : aiMode === "content-enhancer"
-              ? { text: lessonContent, type: "lessonContent" }
+              ? { 
+                  text: convertHTMLToText(lessonContent), 
+                  type: "lessonContent" 
+                }
               : undefined
           }
         />

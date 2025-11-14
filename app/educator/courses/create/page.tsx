@@ -83,10 +83,80 @@ export default function CreateCoursePage() {
     setArr(newArr)
   }
 
+  const convertTextToHTML = (text: string): string => {
+    if (!text || !text.trim()) return ""
+    
+    // Convert plain text to HTML, preserving line breaks
+    // Split by double newlines for paragraphs, single newlines for line breaks
+    const trimmedText = text.trim()
+    
+    // If text contains double newlines, split into paragraphs
+    if (trimmedText.includes("\n\n") || trimmedText.includes("\r\n\r\n")) {
+      const paragraphs = trimmedText.split(/\n\s*\n|\r\n\s*\r\n/).filter(p => p.trim())
+      if (paragraphs.length === 0) return ""
+      
+      return paragraphs
+        .map(paragraph => {
+          // Replace single newlines within paragraphs with <br>
+          const htmlParagraph = paragraph
+            .split(/\n|\r\n/)
+            .map(line => line.trim())
+            .filter(line => line.length > 0)
+            .join("<br>")
+          return `<p>${htmlParagraph}</p>`
+        })
+        .join("")
+    } else {
+      // Single paragraph - replace single newlines with <br>
+      const htmlParagraph = trimmedText
+        .split(/\n|\r\n/)
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join("<br>")
+      return `<p>${htmlParagraph}</p>`
+    }
+  }
+
+  const convertHTMLToText = (html: string): string => {
+    if (!html || !html.trim()) return ""
+    
+    // Create a temporary DOM element to parse HTML
+    const tempDiv = document.createElement("div")
+    tempDiv.innerHTML = html
+    
+    // Extract text content and preserve line breaks
+    // Replace <p> tags with double newlines, <br> with single newlines
+    let text = tempDiv.innerText || tempDiv.textContent || ""
+    
+    // If HTML contains <p> tags, preserve paragraph structure
+    if (html.includes("<p>")) {
+      // Split by </p> and extract text from each paragraph
+      const paragraphs = html.match(/<p[^>]*>([\s\S]*?)<\/p>/g) || []
+      if (paragraphs.length > 0) {
+        text = paragraphs
+          .map(p => {
+            const content = p.replace(/<p[^>]*>|<\/p>/g, "")
+            return content.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").trim()
+          })
+          .filter(p => p.length > 0)
+          .join("\n\n")
+      }
+    } else {
+      // Handle <br> tags
+      text = text.replace(/\n\n+/g, "\n\n") // Normalize multiple newlines
+    }
+    
+    return text.trim()
+  }
+
   const handleAIOutlineApply = (outline: any) => {
     if (outline.courseTitle) setTitle(outline.courseTitle)
     if (outline.subtitle) setSubtitle(outline.subtitle)
-    if (outline.description) setDescription(outline.description)
+    if (outline.description) {
+      // Convert plain text description to HTML format for RichTextEditor
+      const htmlDescription = convertTextToHTML(outline.description)
+      setDescription(htmlDescription)
+    }
     if (outline.learningObjectives) setObjectives(outline.learningObjectives)
     if (outline.prerequisites) setRequirements(outline.prerequisites)
     if (outline.targetAudience) setTargetAudience(outline.targetAudience)
@@ -99,7 +169,8 @@ export default function CreateCoursePage() {
     let type = field
     
     if (field === "description") {
-      text = description
+      // Convert HTML description to plain text for AI enhancement
+      text = convertHTMLToText(description)
     } else if (field === "objectives") {
       text = objectives.filter(o => o.trim()).join("\n")
     }
@@ -117,7 +188,11 @@ export default function CreateCoursePage() {
     if (Array.isArray(enhanced)) {
       setObjectives(enhanced)
     } else {
-      setDescription(enhanced)
+      // Convert plain text to HTML format for RichTextEditor if it's not already HTML
+      const htmlDescription = typeof enhanced === "string" && !enhanced.trim().startsWith("<") 
+        ? convertTextToHTML(enhanced)
+        : enhanced
+      setDescription(htmlDescription)
     }
     setShowAI(false)
   }
@@ -485,7 +560,12 @@ export default function CreateCoursePage() {
           onApply={aiMode === "course-outline" ? handleAIOutlineApply : handleEnhancedContentApply}
           initialData={
             aiMode === "content-enhancer"
-              ? { text: description || objectives.join("\n"), type: description ? "description" : "objectives" }
+              ? { 
+                  text: description 
+                    ? convertHTMLToText(description) 
+                    : objectives.join("\n"), 
+                  type: description ? "description" : "objectives" 
+                }
               : undefined
           }
         />
