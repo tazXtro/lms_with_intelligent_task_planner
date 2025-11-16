@@ -40,9 +40,9 @@ export default function AuthPage() {
       const result = isSignUp ? await signUp(formData) : await signIn(formData)
       
       if (result && 'error' in result) {
-        setError(result.error)
+        setError(result.error ?? null)
       } else if (result && 'message' in result) {
-        setSuccess(result.message)
+        setSuccess(result.message ?? null)
       }
     })
   }

@@ -395,7 +395,7 @@ export default function LearnerDashboard() {
                           <span className="ml-2 px-2 py-1 bg-success/20 text-success border-2 border-success rounded text-xs font-heading whitespace-nowrap">
                             Completed
                           </span>
-                        ) : enrollment.progress > 0 ? (
+                        ) : (enrollment.progress ?? 0) > 0 ? (
                           <span className="ml-2 px-2 py-1 bg-main/20 text-main border-2 border-main rounded text-xs font-heading whitespace-nowrap">
                             In Progress
                           </span>
@@ -417,9 +417,9 @@ export default function LearnerDashboard() {
                           </span>
                         </div>
                         <Progress value={enrollment.progress || 0} className="h-3" />
-                        {enrollment.progress > 0 && enrollment.progress < 100 && (
+                        {(enrollment.progress ?? 0) > 0 && (enrollment.progress ?? 0) < 100 && (
                           <p className="text-xs text-foreground/60 mt-2 font-base">
-                            {Math.round((enrollment.progress / 100) * enrollment.course.total_lessons)} of {enrollment.course.total_lessons} lessons
+                            {Math.round(((enrollment.progress ?? 0) / 100) * enrollment.course.total_lessons)} of {enrollment.course.total_lessons} lessons
                           </p>
                         )}
                       </div>
@@ -430,9 +430,9 @@ export default function LearnerDashboard() {
                       </div>
 
                       <NButton className="w-full" variant="default">
-                        {enrollment.progress === 100 
+                        {(enrollment.progress ?? 0) === 100 
                           ? "Review Course" 
-                          : enrollment.progress > 0 
+                          : (enrollment.progress ?? 0) > 0 
                             ? "Continue Learning" 
                             : "Start Learning"
                         } <ArrowRight className="ml-2 w-4 h-4" />

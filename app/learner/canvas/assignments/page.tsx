@@ -317,8 +317,8 @@ export default function CanvasAssignmentsPage() {
                 <NCard 
                   key={assignment.id} 
                   className={`p-6 hover:shadow-lg transition-all ${
-                    dueDate.urgency === 'overdue' ? 'border-destructive/50' : ''
-                  } ${dueDate.urgency === 'today' ? 'border-amber-600/50' : ''}`}
+                    (typeof dueDate === 'object' && dueDate.urgency === 'overdue') ? 'border-destructive/50' : ''
+                  } ${(typeof dueDate === 'object' && dueDate.urgency === 'today') ? 'border-amber-600/50' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
@@ -355,13 +355,13 @@ export default function CanvasAssignmentsPage() {
 
                       {/* Due Date */}
                       {assignment.due_at && (
-                        <div className={`flex items-center gap-2 mb-3 ${getDueDateColor(dueDate.urgency)}`}>
+                        <div className={`flex items-center gap-2 mb-3 ${typeof dueDate === 'object' ? getDueDateColor(dueDate.urgency) : ''}`}>
                           <Calendar className="w-4 h-4" />
                           <span className="font-heading text-sm">
-                            Due {dueDate.formatted}
-                            {dueDate.urgency === 'overdue' && ' (Overdue)'}
-                            {dueDate.urgency === 'today' && ' (Today!)'}
-                            {dueDate.urgency === 'tomorrow' && ' (Tomorrow)'}
+                            Due {typeof dueDate === 'object' ? dueDate.formatted : dueDate}
+                            {typeof dueDate === 'object' && dueDate.urgency === 'overdue' && ' (Overdue)'}
+                            {typeof dueDate === 'object' && dueDate.urgency === 'today' && ' (Today!)'}
+                            {typeof dueDate === 'object' && dueDate.urgency === 'tomorrow' && ' (Tomorrow)'}
                           </span>
                         </div>
                       )}

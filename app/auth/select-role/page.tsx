@@ -40,7 +40,7 @@ export default function SelectRolePage() {
             Choose Your Role
           </h1>
           <p className="text-foreground/70 font-base">
-            Select how you'll be using DigiGyan
+            Select how you&apos;ll be using DigiGyan
           </p>
         </div>
 
@@ -62,7 +62,7 @@ export default function SelectRolePage() {
                 <BookOpen className="w-7 h-7 text-main-foreground" />
               </div>
               <div className="text-left flex-1">
-                <h3 className="font-heading text-xl mb-1">I'm an Educator</h3>
+                <h3 className="font-heading text-xl mb-1">I&apos;m an Educator</h3>
                 <p className="text-sm text-foreground/70">Create and sell courses, track student progress</p>
               </div>
               <ArrowRight className="w-5 h-5 text-foreground/50 group-hover:text-foreground transition-colors" />
@@ -79,7 +79,7 @@ export default function SelectRolePage() {
                 <Brain className="w-7 h-7 text-main-foreground" />
               </div>
               <div className="text-left flex-1">
-                <h3 className="font-heading text-xl mb-1">I'm a Learner</h3>
+                <h3 className="font-heading text-xl mb-1">I&apos;m a Learner</h3>
                 <p className="text-sm text-foreground/70">Enroll in courses, manage learning tasks with AI</p>
               </div>
               <ArrowRight className="w-5 h-5 text-foreground/50 group-hover:text-foreground transition-colors" />

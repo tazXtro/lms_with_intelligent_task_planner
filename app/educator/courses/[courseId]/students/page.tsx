@@ -267,7 +267,8 @@ export default function CourseStudentsPage() {
     )
   }
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "N/A"
     const date = new Date(dateString)
     const now = new Date()
     const diffMs = now.getTime() - date.getTime()

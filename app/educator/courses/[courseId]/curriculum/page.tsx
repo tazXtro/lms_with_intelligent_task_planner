@@ -400,7 +400,7 @@ export default function CurriculumBuilderPage() {
 
       // If we're editing an existing lesson, use its ID
       // Otherwise, we need to save the lesson first
-      let lessonIdToUse = editingLesson
+      const lessonIdToUse = editingLesson
 
       if (!lessonIdToUse) {
         alert("Please save the lesson first, then generate the assessment")

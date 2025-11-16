@@ -119,7 +119,7 @@ export default function CourseDetailPage() {
       const totalDuration = sections.reduce((total, section) => {
         return (
           total +
-          section.lessons.reduce((sectionTotal, lesson) => {
+          section.lessons.reduce((sectionTotal: number, lesson: { duration_minutes?: number }) => {
             return sectionTotal + (lesson.duration_minutes || 0)
           }, 0)
         )
@@ -395,22 +395,23 @@ export default function CourseDetailPage() {
                       <div className="border-t-2 border-border bg-secondary-background">
                         {section.lessons.map((lesson, lessonIndex) => {
                           const isClickable = lesson.is_preview || course.is_enrolled
-                          const LessonWrapper = isClickable ? Link : 'div'
-                          const wrapperProps = isClickable
-                            ? { href: lesson.is_preview && !course.is_enrolled 
+                          const href = isClickable
+                            ? (lesson.is_preview && !course.is_enrolled 
                                 ? `/learner/preview/${course.id}/${lesson.id}` 
-                                : `/learner/learn/${course.id}` }
-                            : {}
+                                : `/learner/learn/${course.id}`)
+                            : undefined
 
-                          return (
-                            <LessonWrapper
+                          const className = `p-4 border-b-2 border-border last:border-b-0 flex items-center justify-between ${
+                            isClickable 
+                              ? 'hover:bg-main/5 cursor-pointer transition-colors' 
+                              : ''
+                          }`
+
+                          return isClickable && href ? (
+                            <Link
                               key={lesson.id}
-                              {...wrapperProps}
-                              className={`p-4 border-b-2 border-border last:border-b-0 flex items-center justify-between ${
-                                isClickable 
-                                  ? 'hover:bg-main/5 cursor-pointer transition-colors' 
-                                  : ''
-                              }`}
+                              href={href}
+                              className={className}
                             >
                               <div className="flex items-center gap-3">
                                 {lesson.is_preview || course.is_enrolled ? (
@@ -434,7 +435,26 @@ export default function CourseDetailPage() {
                                   {lesson.duration_minutes} min
                                 </span>
                               )}
-                            </LessonWrapper>
+                            </Link>
+                          ) : (
+                            <div
+                              key={lesson.id}
+                              className={className}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Lock className="w-4 h-4 text-foreground/30" />
+                                <div>
+                                  <p className="font-base text-sm">
+                                    {lessonIndex + 1}. {lesson.title}
+                                  </p>
+                                </div>
+                              </div>
+                              {lesson.duration_minutes && (
+                                <span className="text-xs text-foreground/70 font-base">
+                                  {lesson.duration_minutes} min
+                                </span>
+                              )}
+                            </div>
                           )
                         })}
                       </div>

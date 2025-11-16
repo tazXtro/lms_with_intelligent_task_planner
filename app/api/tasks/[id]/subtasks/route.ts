@@ -153,7 +153,7 @@ export async function PATCH(
       )
     }
 
-    let subtasks: Subtask[] = Array.isArray(task.subtasks) ? task.subtasks : []
+    const subtasks: Subtask[] = Array.isArray(task.subtasks) ? task.subtasks : []
     
     // Find and update subtask
     const subtaskIndex = subtasks.findIndex(st => st.id === subtaskId)

@@ -113,9 +113,9 @@ export function SpeechTest() {
         {!transcript && !isListening && isSupported && (
           <div className="p-4 bg-muted/50 rounded-lg border border-dashed">
             <p className="text-sm text-muted-foreground text-center">
-              Click "Start Recording" and speak into your microphone.
+              Click &quot;Start Recording&quot; and speak into your microphone.
               <br />
-              Transcription appears in real-time. Click "Stop Recording" when finished.
+              Transcription appears in real-time. Click &quot;Stop Recording&quot; when finished.
             </p>
           </div>
         )}

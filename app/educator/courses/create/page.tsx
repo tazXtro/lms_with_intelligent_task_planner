@@ -166,7 +166,6 @@ export default function CreateCoursePage() {
 
   const handleEnhanceContent = (field: "description" | "objectives") => {
     let text = ""
-    let type = field
     
     if (field === "description") {
       // Convert HTML description to plain text for AI enhancement
