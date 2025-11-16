@@ -110,7 +110,7 @@ Be specific to the task title and course subject matter.`
         "X-Title": "DigiGyan LMS"
       },
       body: JSON.stringify({
-        model: "minimax/minimax-m2:free",
+        model: "meta-llama/llama-3.3-70b-instruct:free",
         messages: [
           {
             role: "system",
