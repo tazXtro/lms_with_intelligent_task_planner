@@ -63,7 +63,7 @@ function StackedCircularFooter() {
           {/* Copyright */}
           <div className="text-center">
             <p className="text-sm text-white/50">
-              © 2024 DigiGyan. All rights reserved.
+              © 2025 DigiGyan. All rights reserved.
             </p>
           </div>
         </div>

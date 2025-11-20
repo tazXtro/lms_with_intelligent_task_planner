@@ -24,9 +24,11 @@ import {
   Edit2,
   Check,
   Loader2,
+  Timer,
 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
+import { PomodoroTimer } from "@/components/pomodoro/PomodoroTimer"
 
 interface Subtask {
   id: string
@@ -85,8 +87,38 @@ export default function TaskPlannerPage() {
   const [editingSubtask, setEditingSubtask] = useState<{ taskId: string; subtaskId: string } | null>(null)
   const [editSubtaskText, setEditSubtaskText] = useState("")
   const [subtaskLoading, setSubtaskLoading] = useState<string | null>(null)
+  const [pomodoroTaskId, setPomodoroTaskId] = useState<string | null>(null)
+  const [pomodoroTaskTitle, setPomodoroTaskTitle] = useState<string>("") 
+  const [pomodoroSettings, setPomodoroSettings] = useState<any>(null)
+  const [isLoadingPomodoroSettings, setIsLoadingPomodoroSettings] = useState(false) 
 
   const supabase = createClient()
+
+  // Fetch pomodoro settings before opening timer
+  const loadPomodoroSettings = async () => {
+    setIsLoadingPomodoroSettings(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setIsLoadingPomodoroSettings(false)
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('pomodoro_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (data && !error) {
+        setPomodoroSettings(data)
+      }
+    } catch (error) {
+      console.error('Error loading pomodoro settings:', error)
+    } finally {
+      setIsLoadingPomodoroSettings(false)
+    }
+  }
 
   // Fetch tasks from database
   const fetchTasks = async () => {
@@ -751,15 +783,29 @@ export default function TaskPlannerPage() {
               </>
             )}
             {task.status === 'in-progress' && (
-              <NButton
-                onClick={() => handleUpdateTaskStatus(task.id, "completed")}
-                variant="accent"
-                size="sm"
-                className="flex-1"
-              >
-                <CheckCircle2 className="w-4 h-4 mr-1" />
-                Complete
-              </NButton>
+              <>
+                <NButton
+                  onClick={() => {
+                    setPomodoroTaskId(task.id)
+                    setPomodoroTaskTitle(task.title)
+                  }}
+                  variant="noShadow"
+                  size="sm"
+                  className="flex-1"
+                >
+                  <Timer className="w-4 h-4 mr-1" />
+                  Focus
+                </NButton>
+                <NButton
+                  onClick={() => handleUpdateTaskStatus(task.id, "completed")}
+                  variant="accent"
+                  size="sm"
+                  className="flex-1"
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-1" />
+                  Complete
+                </NButton>
+              </>
             )}
           </div>
         )}
@@ -917,14 +963,22 @@ export default function TaskPlannerPage() {
               </button>
               <h1 className="text-3xl font-heading">Task Planner</h1>
             </div>
-            <NButton
-              onClick={() => setShowNewTaskForm(true)}
-              variant="default"
-              size="lg"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              New Task
-            </NButton>
+            <div className="flex items-center gap-3">
+              <Link href="/learner/productivity">
+                <NButton variant="neutral" size="lg">
+                  <Timer className="w-5 h-5 mr-2" />
+                  Productivity
+                </NButton>
+              </Link>
+              <NButton
+                onClick={() => setShowNewTaskForm(true)}
+                variant="default"
+                size="lg"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                New Task
+              </NButton>
+            </div>
           </div>
         </header>
 
@@ -1121,7 +1175,24 @@ export default function TaskPlannerPage() {
           </div>
         </main>
       </div>
+
+      {/* Pomodoro Timer Modal */}
+      {pomodoroTaskId && !isLoadingPomodoroSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <PomodoroTimer
+            taskId={pomodoroTaskId}
+            taskTitle={pomodoroTaskTitle}
+            initialSettings={pomodoroSettings}
+            onClose={() => {
+              setPomodoroTaskId(null)
+              setPomodoroTaskTitle("")
+              setPomodoroSettings(null)
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }
+
 
