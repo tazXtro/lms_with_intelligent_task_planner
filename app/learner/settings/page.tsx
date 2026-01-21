@@ -3,11 +3,10 @@
 import { useState, useEffect } from "react"
 import { NButton } from "@/components/ui/nbutton"
 import { NCard } from "@/components/ui/ncard"
-import { BookOpen, Menu, X, LogOut, Settings, Calendar, Bell, Mail, CheckCircle2, AlertCircle, Brain, Loader2, GraduationCap } from "lucide-react"
-import Link from "next/link"
+import { Calendar, Bell, Mail, CheckCircle2, AlertCircle, Loader2, GraduationCap } from "lucide-react"
+import { LearnerLayout } from "@/components/learner-layout"
 
 export default function SettingsPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [googleConnected, setGoogleConnected] = useState(false)
   const [remindersEnabled, setRemindersEnabled] = useState(true)
   const [reminderTiming, setReminderTiming] = useState("24h")
@@ -19,7 +18,7 @@ export default function SettingsPage() {
   const [userEmail, setUserEmail] = useState("")
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState("")
-  
+
   // Canvas integration state
   const [canvasConnected, setCanvasConnected] = useState(false)
   const [canvasUrl, setCanvasUrl] = useState("https://canvas.instructure.com")
@@ -95,7 +94,7 @@ export default function SettingsPage() {
     try {
       setLoading(true)
       const response = await fetch('/api/calendar/connect')
-      
+
       if (response.ok) {
         const data = await response.json()
         setCalendarSettings(data.settings)
@@ -112,7 +111,7 @@ export default function SettingsPage() {
   const handleGoogleConnect = async () => {
     setSyncStatus("syncing")
     setErrorMessage("")
-    
+
     try {
       const response = await fetch('/api/calendar/connect', {
         method: 'POST',
@@ -126,13 +125,13 @@ export default function SettingsPage() {
 
       setGoogleConnected(true)
       setSyncStatus("success")
-      
+
       // Fetch updated settings
       await fetchCalendarSettings()
-      
+
       // Auto-sync tasks after connecting
       await handleSyncTasks()
-      
+
       setTimeout(() => setSyncStatus("idle"), 3000)
     } catch (error: any) {
       console.error('Error connecting Google Calendar:', error)
@@ -190,9 +189,9 @@ export default function SettingsPage() {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Never'
     const date = new Date(dateString)
-    return date.toLocaleString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -203,7 +202,7 @@ export default function SettingsPage() {
   const fetchCanvasSettings = async () => {
     try {
       const response = await fetch('/api/canvas/connect')
-      
+
       if (response.ok) {
         const data = await response.json()
         setCanvasConnected(data.connected)
@@ -223,7 +222,7 @@ export default function SettingsPage() {
 
     setCanvasLoading(true)
     setCanvasError("")
-    
+
     try {
       const response = await fetch('/api/canvas/connect', {
         method: 'POST',
@@ -240,13 +239,13 @@ export default function SettingsPage() {
       setCanvasConnected(true)
       setShowCanvasForm(false)
       setCanvasToken("")
-      
+
       // Fetch updated settings
       await fetchCanvasSettings()
-      
+
       // Auto-sync Canvas data after connecting
       await handleCanvasSync()
-      
+
       alert('✅ Successfully connected to Canvas!')
     } catch (error: any) {
       console.error('Error connecting Canvas:', error)
@@ -281,7 +280,7 @@ export default function SettingsPage() {
   const handleCanvasSync = async () => {
     setCanvasLoading(true)
     setCanvasError("")
-    
+
     try {
       const response = await fetch('/api/canvas/sync', {
         method: 'POST',
@@ -295,7 +294,7 @@ export default function SettingsPage() {
 
       // Fetch updated settings
       await fetchCanvasSettings()
-      
+
       alert(`✅ Canvas data synced successfully!\n\nCourses: ${data.results.courses}\nAssignments: ${data.results.assignments}\nAnnouncements: ${data.results.announcements}\nGrades: ${data.results.grades}`)
     } catch (error: any) {
       console.error('Error syncing Canvas:', error)
@@ -306,518 +305,461 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Sidebar */}
-      <aside
-        className={`fixed left-0 top-0 h-screen w-64 bg-secondary-background border-r-4 border-border transform transition-transform duration-300 z-40 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        }`}
-      >
-        <div className="p-6 border-b-2 border-border">
-          <Link href="/" className="flex items-center gap-3 hover:-translate-y-1 transition-transform">
-            <div className="w-10 h-10 bg-main border-2 border-border rounded-base flex items-center justify-center shadow-shadow">
-              <Brain className="w-6 h-6 text-main-foreground" />
-            </div>
-            <span className="font-heading text-xl">DigiGyan</span>
-          </Link>
+    <LearnerLayout>
+      {/* Header */}
+      <header className="sticky top-0 z-30 bg-background border-b-4 border-border">
+        <div className="px-6 py-5">
+          <h1 className="text-3xl font-heading">Settings</h1>
         </div>
+      </header>
 
-        <nav className="p-4 space-y-2">
-          <Link
-            href="/learner/dashboard"
-            className="flex items-center gap-3 px-4 py-3 rounded-base text-foreground hover:bg-main/5 transition-colors font-base"
-          >
-            <BookOpen className="w-5 h-5" />
-            Dashboard
-          </Link>
-          <Link
-            href="/learner/settings"
-            className="flex items-center gap-3 px-4 py-3 rounded-base bg-main/10 border-2 border-border text-foreground font-heading"
-          >
-            <Settings className="w-5 h-5" />
-            Settings
-          </Link>
-        </nav>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t-2 border-border space-y-2">
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-base text-foreground hover:bg-destructive/10 transition-colors font-base">
-            <LogOut className="w-5 h-5" />
-            Sign Out
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="md:ml-64">
-        {/* Top Bar */}
-        <header className="sticky top-0 z-30 bg-background border-b-4 border-border">
-          <div className="px-6 py-5 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="md:hidden p-2 hover:bg-main/10 rounded-base transition-colors border-2 border-border"
-              >
-                {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
-              <h1 className="text-3xl font-heading">Settings</h1>
+      {/* Content */}
+      <main className="p-6 max-w-4xl">
+        <div className="space-y-8">
+          {/* Google Calendar Integration */}
+          <NCard className="p-8">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h2 className="text-3xl font-heading mb-3 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-main border-2 border-border rounded-base flex items-center justify-center">
+                    <Calendar className="w-6 h-6 text-main-foreground" />
+                  </div>
+                  Google Calendar Integration
+                </h2>
+                <p className="text-foreground/70 font-base text-lg">
+                  Sync your learning tasks with Google Calendar for seamless time management
+                </p>
+              </div>
             </div>
-          </div>
-        </header>
 
-        {/* Content */}
-        <main className="p-6 max-w-4xl">
-          <div className="space-y-8">
-            {/* Google Calendar Integration */}
-            <NCard className="p-8">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h2 className="text-3xl font-heading mb-3 flex items-center gap-3">
-                    <div className="w-12 h-12 bg-main border-2 border-border rounded-base flex items-center justify-center">
-                      <Calendar className="w-6 h-6 text-main-foreground" />
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-main" />
+              </div>
+            ) : (
+              <>
+                <NCard className="p-6 mb-6 bg-main/5 border-main/20">
+                  {googleConnected ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-success border-2 border-border rounded-base flex items-center justify-center">
+                          <CheckCircle2 className="w-6 h-6 text-main-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-heading text-lg">Connected to Google Calendar</p>
+                          <p className="text-sm text-foreground/70 font-base">{userEmail}</p>
+                        </div>
+                      </div>
+                      <NCard className="p-5 bg-success/10 border-success/30">
+                        <p className="text-success font-heading mb-2">Sync Status: Active</p>
+                        <p className="text-foreground/70 font-base text-sm">
+                          Your learning tasks are automatically synced to your Google Calendar. New tasks will sync immediately.
+                        </p>
+                      </NCard>
                     </div>
-                    Google Calendar Integration
-                  </h2>
-                  <p className="text-foreground/70 font-base text-lg">
-                    Sync your learning tasks with Google Calendar for seamless time management
-                  </p>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-foreground/10 border-2 border-border rounded-base flex items-center justify-center">
+                          <AlertCircle className="w-6 h-6 text-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-heading text-lg">Not Connected</p>
+                          <p className="text-sm text-foreground/70 font-base">Connect your Google Calendar to sync tasks</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </NCard>
+
+                {errorMessage && (
+                  <NCard className="mb-5 p-5 bg-destructive/10 border-destructive/30">
+                    <div className="flex items-center gap-2 text-destructive">
+                      <AlertCircle className="w-5 h-5" />
+                      <span className="text-sm font-base">{errorMessage}</span>
+                    </div>
+                  </NCard>
+                )}
+
+                <div className="flex gap-3">
+                  {googleConnected ? (
+                    <>
+                      <NButton onClick={handleGoogleDisconnect} variant="neutral">
+                        Disconnect
+                      </NButton>
+                      <NButton
+                        onClick={async () => {
+                          try {
+                            await handleSyncTasks()
+                            alert('✅ Tasks synced successfully!')
+                          } catch (error) {
+                            alert('❌ Failed to sync tasks. Please try again.')
+                          }
+                        }}
+                        variant="default"
+                      >
+                        Sync Now
+                      </NButton>
+                    </>
+                  ) : (
+                    <NButton
+                      onClick={handleGoogleConnect}
+                      disabled={syncStatus === "syncing"}
+                      variant="default"
+                      size="lg"
+                    >
+                      {syncStatus === "syncing" ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Connecting...
+                        </>
+                      ) : (
+                        "Connect Google Calendar"
+                      )}
+                    </NButton>
+                  )}
+                </div>
+
+                {syncStatus === "success" && (
+                  <NCard className="mt-5 p-5 bg-success/10 border-success/30">
+                    <div className="flex items-center gap-2 text-success">
+                      <CheckCircle2 className="w-5 h-5" />
+                      <span className="text-sm font-heading">Successfully connected to Google Calendar!</span>
+                    </div>
+                  </NCard>
+                )}
+              </>
+            )}
+          </NCard>
+
+          {/* Calendar Sync Details */}
+          {googleConnected && calendarSettings && (
+            <NCard className="p-8 bg-main/5 border-main/20">
+              <h3 className="font-heading text-xl mb-5">Sync Details</h3>
+              <div className="space-y-4 text-sm font-base">
+                <div className="flex justify-between p-3 border-b-2 border-border">
+                  <span className="text-foreground/70">Last Sync:</span>
+                  <span className="font-heading">{formatDate(calendarSettings.last_sync_at)}</span>
+                </div>
+                <div className="flex justify-between p-3 border-b-2 border-border">
+                  <span className="text-foreground/70">Tasks Synced:</span>
+                  <span className="font-heading">{syncedTasksCount} tasks</span>
+                </div>
+                <div className="flex justify-between p-3 border-b-2 border-border">
+                  <span className="text-foreground/70">Calendar:</span>
+                  <span className="font-heading">{calendarSettings.calendar_name || 'DigiGyan Learning Tasks'}</span>
+                </div>
+                <div className="flex justify-between p-3">
+                  <span className="text-foreground/70">Sync Frequency:</span>
+                  <span className="font-heading">Real-time</span>
                 </div>
               </div>
+            </NCard>
+          )}
 
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-main" />
+          {/* Canvas LMS Integration */}
+          <NCard className="p-8">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h2 className="text-3xl font-heading mb-3 flex items-center gap-3">
+                  <div className="w-12 h-12 bg-accent border-2 border-border rounded-base flex items-center justify-center">
+                    <GraduationCap className="w-6 h-6 text-main-foreground" />
+                  </div>
+                  Canvas LMS Integration
+                </h2>
+                <p className="text-foreground/70 font-base text-lg">
+                  Connect your Canvas account to sync courses, assignments, and announcements
+                </p>
+              </div>
+            </div>
+
+            <NCard className="p-6 mb-6 bg-accent/5 border-accent/20">
+              {canvasConnected ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-success border-2 border-border rounded-base flex items-center justify-center">
+                      <CheckCircle2 className="w-6 h-6 text-main-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-heading text-lg">Connected to Canvas</p>
+                      <p className="text-sm text-foreground/70 font-base">{canvasSettings?.canvas_url}</p>
+                    </div>
+                  </div>
+                  <NCard className="p-5 bg-success/10 border-success/30">
+                    <p className="text-success font-heading mb-2">Sync Status: Active</p>
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                      <div className="text-center">
+                        <p className="text-2xl font-heading text-foreground">{canvasStats.courses}</p>
+                        <p className="text-sm text-foreground/70 font-base">Courses</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-heading text-foreground">{canvasStats.assignments}</p>
+                        <p className="text-sm text-foreground/70 font-base">Assignments</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-heading text-foreground">{canvasStats.announcements}</p>
+                        <p className="text-sm text-foreground/70 font-base">Announcements</p>
+                      </div>
+                    </div>
+                  </NCard>
                 </div>
               ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-foreground/10 border-2 border-border rounded-base flex items-center justify-center">
+                      <AlertCircle className="w-6 h-6 text-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-heading text-lg">Not Connected</p>
+                      <p className="text-sm text-foreground/70 font-base">Connect your Canvas account to get started</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </NCard>
+
+            {canvasError && (
+              <NCard className="mb-5 p-5 bg-destructive/10 border-destructive/30">
+                <div className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="w-5 h-5" />
+                  <span className="text-sm font-base">{canvasError}</span>
+                </div>
+              </NCard>
+            )}
+
+            {!canvasConnected && showCanvasForm && (
+              <NCard className="p-6 mb-6 bg-main/5 border-main/20">
+                <h3 className="font-heading text-xl mb-4">Connect to Canvas</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-heading mb-2">Canvas URL</label>
+                    <input
+                      type="url"
+                      value={canvasUrl}
+                      onChange={(e) => setCanvasUrl(e.target.value)}
+                      placeholder="https://canvas.instructure.com"
+                      className="w-full px-4 py-3 rounded-base border-2 border-border bg-background font-base"
+                    />
+                    <p className="text-xs text-foreground/60 mt-1 font-base">
+                      Your Canvas institution URL (e.g., https://yourschool.instructure.com)
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-heading mb-2">Access Token</label>
+                    <input
+                      type="password"
+                      value={canvasToken}
+                      onChange={(e) => setCanvasToken(e.target.value)}
+                      placeholder="Enter your Canvas access token"
+                      className="w-full px-4 py-3 rounded-base border-2 border-border bg-background font-base"
+                    />
+                    <p className="text-xs text-foreground/60 mt-1 font-base">
+                      Generate a token from Canvas Settings → Approved Integrations → New Access Token
+                    </p>
+                  </div>
+                </div>
+              </NCard>
+            )}
+
+            <div className="flex gap-3">
+              {canvasConnected ? (
                 <>
-                  <NCard className="p-6 mb-6 bg-main/5 border-main/20">
-                    {googleConnected ? (
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-success border-2 border-border rounded-base flex items-center justify-center">
-                            <CheckCircle2 className="w-6 h-6 text-main-foreground" />
-                          </div>
-                          <div>
-                            <p className="font-heading text-lg">Connected to Google Calendar</p>
-                            <p className="text-sm text-foreground/70 font-base">{userEmail}</p>
-                          </div>
-                        </div>
-                        <NCard className="p-5 bg-success/10 border-success/30">
-                          <p className="text-success font-heading mb-2">Sync Status: Active</p>
-                          <p className="text-foreground/70 font-base text-sm">
-                            Your learning tasks are automatically synced to your Google Calendar. New tasks will sync immediately.
-                          </p>
-                        </NCard>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-foreground/10 border-2 border-border rounded-base flex items-center justify-center">
-                            <AlertCircle className="w-6 h-6 text-foreground" />
-                          </div>
-                          <div>
-                            <p className="font-heading text-lg">Not Connected</p>
-                            <p className="text-sm text-foreground/70 font-base">Connect your Google Calendar to sync tasks</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </NCard>
-
-                  {errorMessage && (
-                    <NCard className="mb-5 p-5 bg-destructive/10 border-destructive/30">
-                      <div className="flex items-center gap-2 text-destructive">
-                        <AlertCircle className="w-5 h-5" />
-                        <span className="text-sm font-base">{errorMessage}</span>
-                      </div>
-                    </NCard>
-                  )}
-
-                  <div className="flex gap-3">
-                    {googleConnected ? (
+                  <NButton onClick={handleCanvasDisconnect} variant="neutral">
+                    Disconnect
+                  </NButton>
+                  <NButton
+                    onClick={handleCanvasSync}
+                    disabled={canvasLoading}
+                    variant="default"
+                  >
+                    {canvasLoading ? (
                       <>
-                        <NButton onClick={handleGoogleDisconnect} variant="neutral">
-                          Disconnect
-                        </NButton>
-                        <NButton 
-                          onClick={async () => {
-                            try {
-                              await handleSyncTasks()
-                              alert('✅ Tasks synced successfully!')
-                            } catch (error) {
-                              alert('❌ Failed to sync tasks. Please try again.')
-                            }
-                          }} 
-                          variant="default"
-                        >
-                          Sync Now
-                        </NButton>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Syncing...
                       </>
                     ) : (
+                      "Sync Now"
+                    )}
+                  </NButton>
+                </>
+              ) : (
+                <>
+                  {showCanvasForm ? (
+                    <>
                       <NButton
-                        onClick={handleGoogleConnect}
-                        disabled={syncStatus === "syncing"}
+                        onClick={handleCanvasConnect}
+                        disabled={canvasLoading}
                         variant="default"
-                        size="lg"
                       >
-                        {syncStatus === "syncing" ? (
+                        {canvasLoading ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             Connecting...
                           </>
                         ) : (
-                          "Connect Google Calendar"
+                          "Connect"
                         )}
                       </NButton>
-                    )}
-                  </div>
-
-                  {syncStatus === "success" && (
-                    <NCard className="mt-5 p-5 bg-success/10 border-success/30">
-                      <div className="flex items-center gap-2 text-success">
-                        <CheckCircle2 className="w-5 h-5" />
-                        <span className="text-sm font-heading">Successfully connected to Google Calendar!</span>
-                      </div>
-                    </NCard>
+                      <NButton onClick={() => setShowCanvasForm(false)} variant="neutral">
+                        Cancel
+                      </NButton>
+                    </>
+                  ) : (
+                    <NButton onClick={() => setShowCanvasForm(true)} variant="default" size="lg">
+                      Connect Canvas
+                    </NButton>
                   )}
                 </>
               )}
-            </NCard>
-
-            {/* Calendar Sync Details */}
-            {googleConnected && calendarSettings && (
-              <NCard className="p-8 bg-main/5 border-main/20">
-                <h3 className="font-heading text-xl mb-5">Sync Details</h3>
-                <div className="space-y-4 text-sm font-base">
-                  <div className="flex justify-between p-3 border-b-2 border-border">
-                    <span className="text-foreground/70">Last Sync:</span>
-                    <span className="font-heading">{formatDate(calendarSettings.last_sync_at)}</span>
-                  </div>
-                  <div className="flex justify-between p-3 border-b-2 border-border">
-                    <span className="text-foreground/70">Tasks Synced:</span>
-                    <span className="font-heading">{syncedTasksCount} tasks</span>
-                  </div>
-                  <div className="flex justify-between p-3 border-b-2 border-border">
-                    <span className="text-foreground/70">Calendar:</span>
-                    <span className="font-heading">{calendarSettings.calendar_name || 'DigiGyan Learning Tasks'}</span>
-                  </div>
-                  <div className="flex justify-between p-3">
-                    <span className="text-foreground/70">Sync Frequency:</span>
-                    <span className="font-heading">Real-time</span>
-                  </div>
-                </div>
-              </NCard>
-            )}
-
-            {/* Canvas LMS Integration */}
-            <NCard className="p-8">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h2 className="text-3xl font-heading mb-3 flex items-center gap-3">
-                    <div className="w-12 h-12 bg-accent border-2 border-border rounded-base flex items-center justify-center">
-                      <GraduationCap className="w-6 h-6 text-main-foreground" />
-                    </div>
-                    Canvas LMS Integration
-                  </h2>
-                  <p className="text-foreground/70 font-base text-lg">
-                    Connect your Canvas account to sync courses, assignments, and announcements
-                  </p>
-                </div>
-              </div>
-
-              <NCard className="p-6 mb-6 bg-accent/5 border-accent/20">
-                {canvasConnected ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-success border-2 border-border rounded-base flex items-center justify-center">
-                        <CheckCircle2 className="w-6 h-6 text-main-foreground" />
-                      </div>
-                      <div>
-                        <p className="font-heading text-lg">Connected to Canvas</p>
-                        <p className="text-sm text-foreground/70 font-base">{canvasSettings?.canvas_url}</p>
-                      </div>
-                    </div>
-                    <NCard className="p-5 bg-success/10 border-success/30">
-                      <p className="text-success font-heading mb-2">Sync Status: Active</p>
-                      <div className="grid grid-cols-3 gap-4 mt-4">
-                        <div className="text-center">
-                          <p className="text-2xl font-heading text-foreground">{canvasStats.courses}</p>
-                          <p className="text-sm text-foreground/70 font-base">Courses</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-2xl font-heading text-foreground">{canvasStats.assignments}</p>
-                          <p className="text-sm text-foreground/70 font-base">Assignments</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-2xl font-heading text-foreground">{canvasStats.announcements}</p>
-                          <p className="text-sm text-foreground/70 font-base">Announcements</p>
-                        </div>
-                      </div>
-                    </NCard>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-foreground/10 border-2 border-border rounded-base flex items-center justify-center">
-                        <AlertCircle className="w-6 h-6 text-foreground" />
-                      </div>
-                      <div>
-                        <p className="font-heading text-lg">Not Connected</p>
-                        <p className="text-sm text-foreground/70 font-base">Connect your Canvas account to get started</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </NCard>
-
-              {canvasError && (
-                <NCard className="mb-5 p-5 bg-destructive/10 border-destructive/30">
-                  <div className="flex items-center gap-2 text-destructive">
-                    <AlertCircle className="w-5 h-5" />
-                    <span className="text-sm font-base">{canvasError}</span>
-                  </div>
-                </NCard>
-              )}
-
-              {!canvasConnected && showCanvasForm && (
-                <NCard className="p-6 mb-6 bg-main/5 border-main/20">
-                  <h3 className="font-heading text-xl mb-4">Connect to Canvas</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-heading mb-2">Canvas URL</label>
-                      <input
-                        type="url"
-                        value={canvasUrl}
-                        onChange={(e) => setCanvasUrl(e.target.value)}
-                        placeholder="https://canvas.instructure.com"
-                        className="w-full px-4 py-3 rounded-base border-2 border-border bg-background font-base"
-                      />
-                      <p className="text-xs text-foreground/60 mt-1 font-base">
-                        Your Canvas institution URL (e.g., https://yourschool.instructure.com)
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-heading mb-2">Access Token</label>
-                      <input
-                        type="password"
-                        value={canvasToken}
-                        onChange={(e) => setCanvasToken(e.target.value)}
-                        placeholder="Enter your Canvas access token"
-                        className="w-full px-4 py-3 rounded-base border-2 border-border bg-background font-base"
-                      />
-                      <p className="text-xs text-foreground/60 mt-1 font-base">
-                        Generate a token from Canvas Settings → Approved Integrations → New Access Token
-                      </p>
-                    </div>
-                  </div>
-                </NCard>
-              )}
-
-              <div className="flex gap-3">
-                {canvasConnected ? (
-                  <>
-                    <NButton onClick={handleCanvasDisconnect} variant="neutral">
-                      Disconnect
-                    </NButton>
-                    <NButton 
-                      onClick={handleCanvasSync}
-                      disabled={canvasLoading}
-                      variant="default"
-                    >
-                      {canvasLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Syncing...
-                        </>
-                      ) : (
-                        "Sync Now"
-                      )}
-                    </NButton>
-                  </>
-                ) : (
-                  <>
-                    {showCanvasForm ? (
-                      <>
-                        <NButton
-                          onClick={handleCanvasConnect}
-                          disabled={canvasLoading}
-                          variant="default"
-                        >
-                          {canvasLoading ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Connecting...
-                            </>
-                          ) : (
-                            "Connect"
-                          )}
-                        </NButton>
-                        <NButton onClick={() => setShowCanvasForm(false)} variant="neutral">
-                          Cancel
-                        </NButton>
-                      </>
-                    ) : (
-                      <NButton onClick={() => setShowCanvasForm(true)} variant="default" size="lg">
-                        Connect Canvas
-                      </NButton>
-                    )}
-                  </>
-                )}
-              </div>
-            </NCard>
-
-            {/* Canvas Sync Details */}
-            {canvasConnected && canvasSettings && (
-              <NCard className="p-8 bg-accent/5 border-accent/20">
-                <h3 className="font-heading text-xl mb-5">Canvas Sync Details</h3>
-                <div className="space-y-4 text-sm font-base">
-                  <div className="flex justify-between p-3 border-b-2 border-border">
-                    <span className="text-foreground/70">Last Sync:</span>
-                    <span className="font-heading">{formatDate(canvasSettings.last_sync_at)}</span>
-                  </div>
-                  <div className="flex justify-between p-3 border-b-2 border-border">
-                    <span className="text-foreground/70">Canvas URL:</span>
-                    <span className="font-heading">{canvasSettings.canvas_url}</span>
-                  </div>
-                  <div className="flex justify-between p-3">
-                    <span className="text-foreground/70">Sync Status:</span>
-                    <span className="font-heading text-success">Active</span>
-                  </div>
-                </div>
-              </NCard>
-            )}
-
-            {/* Notification Settings */}
-            <NCard className="p-8">
-              <h2 className="text-3xl font-heading mb-8 flex items-center gap-3">
-                <div className="w-12 h-12 bg-accent border-2 border-border rounded-base flex items-center justify-center">
-                  <Bell className="w-6 h-6 text-main-foreground" />
-                </div>
-                Notification Preferences
-              </h2>
-
-              <div className="space-y-8">
-                {/* Task Reminders */}
-                <div className="border-b-2 border-border pb-8">
-                  <div className="flex items-center justify-between mb-5">
-                    <div>
-                      <h3 className="font-heading text-xl mb-1">Task Reminders</h3>
-                      <p className="text-sm text-foreground/70 font-base">Get reminded about upcoming tasks and deadlines</p>
-                    </div>
-                    <button
-                      onClick={() => setRemindersEnabled(!remindersEnabled)}
-                      className={`relative inline-flex h-10 w-16 items-center rounded-base border-2 border-border transition-all ${
-                        remindersEnabled ? "bg-main" : "bg-foreground/10"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-7 w-7 transform rounded-base bg-secondary-background border-2 border-border transition-transform ${
-                          remindersEnabled ? "translate-x-7" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  {remindersEnabled && (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-heading mb-2">Reminder Timing</label>
-                        <select
-                          value={reminderTiming}
-                          onChange={(e) => setReminderTiming(e.target.value)}
-                          className="w-full px-4 py-3 border-2 border-border rounded-base bg-secondary-background font-base text-foreground focus:outline-hidden focus:ring-2 focus:ring-black focus:ring-offset-2"
-                        >
-                          <option value="15m">15 minutes before</option>
-                          <option value="1h">1 hour before</option>
-                          <option value="24h">1 day before</option>
-                          <option value="3d">3 days before</option>
-                        </select>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Email Notifications */}
-                <div className="border-b-2 border-border pb-8">
-                  <div className="flex items-center justify-between mb-5">
-                    <div>
-                      <h3 className="font-heading text-xl mb-1 flex items-center gap-2">
-                        <Mail className="w-5 h-5" />
-                        Email Notifications
-                      </h3>
-                      <p className="text-sm text-foreground/70 font-base">
-                        Receive email updates about your learning progress
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setEmailNotifications(!emailNotifications)}
-                      className={`relative inline-flex h-10 w-16 items-center rounded-base border-2 border-border transition-all ${
-                        emailNotifications ? "bg-main" : "bg-foreground/10"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-7 w-7 transform rounded-base bg-secondary-background border-2 border-border transition-transform ${
-                          emailNotifications ? "translate-x-7" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  {emailNotifications && (
-                    <div className="space-y-3 text-sm">
-                      <label className="flex items-center gap-3 p-3 rounded-base hover:bg-main/5 transition-colors cursor-pointer">
-                        <input type="checkbox" defaultChecked className="rounded w-5 h-5" />
-                        <span className="font-base">Course completion reminders</span>
-                      </label>
-                      <label className="flex items-center gap-3 p-3 rounded-base hover:bg-main/5 transition-colors cursor-pointer">
-                        <input type="checkbox" defaultChecked className="rounded w-5 h-5" />
-                        <span className="font-base">Weekly progress summary</span>
-                      </label>
-                      <label className="flex items-center gap-3 p-3 rounded-base hover:bg-main/5 transition-colors cursor-pointer">
-                        <input type="checkbox" defaultChecked className="rounded w-5 h-5" />
-                        <span className="font-base">New course recommendations</span>
-                      </label>
-                    </div>
-                  )}
-                </div>
-
-                {/* Push Notifications */}
-                <div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-heading text-xl mb-1">Push Notifications</h3>
-                      <p className="text-sm text-foreground/70 font-base">
-                        Receive browser notifications for important updates
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setPushNotifications(!pushNotifications)}
-                      className={`relative inline-flex h-10 w-16 items-center rounded-base border-2 border-border transition-all ${
-                        pushNotifications ? "bg-main" : "bg-foreground/10"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-7 w-7 transform rounded-base bg-secondary-background border-2 border-border transition-transform ${
-                          pushNotifications ? "translate-x-7" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </NCard>
-
-            {/* Save Button */}
-            <div className="flex gap-3">
-              <NButton onClick={saveNotificationPreferences} variant="default" size="lg">
-                Save Changes
-              </NButton>
-              <NButton onClick={fetchNotificationPreferences} variant="neutral" size="lg">
-                Cancel
-              </NButton>
             </div>
+          </NCard>
+
+          {/* Canvas Sync Details */}
+          {canvasConnected && canvasSettings && (
+            <NCard className="p-8 bg-accent/5 border-accent/20">
+              <h3 className="font-heading text-xl mb-5">Canvas Sync Details</h3>
+              <div className="space-y-4 text-sm font-base">
+                <div className="flex justify-between p-3 border-b-2 border-border">
+                  <span className="text-foreground/70">Last Sync:</span>
+                  <span className="font-heading">{formatDate(canvasSettings.last_sync_at)}</span>
+                </div>
+                <div className="flex justify-between p-3 border-b-2 border-border">
+                  <span className="text-foreground/70">Canvas URL:</span>
+                  <span className="font-heading">{canvasSettings.canvas_url}</span>
+                </div>
+                <div className="flex justify-between p-3">
+                  <span className="text-foreground/70">Sync Status:</span>
+                  <span className="font-heading text-success">Active</span>
+                </div>
+              </div>
+            </NCard>
+          )}
+
+          {/* Notification Settings */}
+          <NCard className="p-8">
+            <h2 className="text-3xl font-heading mb-8 flex items-center gap-3">
+              <div className="w-12 h-12 bg-accent border-2 border-border rounded-base flex items-center justify-center">
+                <Bell className="w-6 h-6 text-main-foreground" />
+              </div>
+              Notification Preferences
+            </h2>
+
+            <div className="space-y-8">
+              {/* Task Reminders */}
+              <div className="border-b-2 border-border pb-8">
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <h3 className="font-heading text-xl mb-1">Task Reminders</h3>
+                    <p className="text-sm text-foreground/70 font-base">Get reminded about upcoming tasks and deadlines</p>
+                  </div>
+                  <button
+                    onClick={() => setRemindersEnabled(!remindersEnabled)}
+                    className={`relative inline-flex h-10 w-16 items-center rounded-base border-2 border-border transition-all ${remindersEnabled ? "bg-main" : "bg-foreground/10"
+                      }`}
+                  >
+                    <span
+                      className={`inline-block h-7 w-7 transform rounded-base bg-secondary-background border-2 border-border transition-transform ${remindersEnabled ? "translate-x-7" : "translate-x-1"
+                        }`}
+                    />
+                  </button>
+                </div>
+
+                {remindersEnabled && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-heading mb-2">Reminder Timing</label>
+                      <select
+                        value={reminderTiming}
+                        onChange={(e) => setReminderTiming(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-border rounded-base bg-secondary-background font-base text-foreground focus:outline-hidden focus:ring-2 focus:ring-black focus:ring-offset-2"
+                      >
+                        <option value="15m">15 minutes before</option>
+                        <option value="1h">1 hour before</option>
+                        <option value="24h">1 day before</option>
+                        <option value="3d">3 days before</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Email Notifications */}
+              <div className="border-b-2 border-border pb-8">
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <h3 className="font-heading text-xl mb-1 flex items-center gap-2">
+                      <Mail className="w-5 h-5" />
+                      Email Notifications
+                    </h3>
+                    <p className="text-sm text-foreground/70 font-base">
+                      Receive email updates about your learning progress
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setEmailNotifications(!emailNotifications)}
+                    className={`relative inline-flex h-10 w-16 items-center rounded-base border-2 border-border transition-all ${emailNotifications ? "bg-main" : "bg-foreground/10"
+                      }`}
+                  >
+                    <span
+                      className={`inline-block h-7 w-7 transform rounded-base bg-secondary-background border-2 border-border transition-transform ${emailNotifications ? "translate-x-7" : "translate-x-1"
+                        }`}
+                    />
+                  </button>
+                </div>
+
+                {emailNotifications && (
+                  <div className="space-y-3 text-sm">
+                    <label className="flex items-center gap-3 p-3 rounded-base hover:bg-main/5 transition-colors cursor-pointer">
+                      <input type="checkbox" defaultChecked className="rounded w-5 h-5" />
+                      <span className="font-base">Course completion reminders</span>
+                    </label>
+                    <label className="flex items-center gap-3 p-3 rounded-base hover:bg-main/5 transition-colors cursor-pointer">
+                      <input type="checkbox" defaultChecked className="rounded w-5 h-5" />
+                      <span className="font-base">Weekly progress summary</span>
+                    </label>
+                    <label className="flex items-center gap-3 p-3 rounded-base hover:bg-main/5 transition-colors cursor-pointer">
+                      <input type="checkbox" defaultChecked className="rounded w-5 h-5" />
+                      <span className="font-base">New course recommendations</span>
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Push Notifications */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-heading text-xl mb-1">Push Notifications</h3>
+                    <p className="text-sm text-foreground/70 font-base">
+                      Receive browser notifications for important updates
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setPushNotifications(!pushNotifications)}
+                    className={`relative inline-flex h-10 w-16 items-center rounded-base border-2 border-border transition-all ${pushNotifications ? "bg-main" : "bg-foreground/10"
+                      }`}
+                  >
+                    <span
+                      className={`inline-block h-7 w-7 transform rounded-base bg-secondary-background border-2 border-border transition-transform ${pushNotifications ? "translate-x-7" : "translate-x-1"
+                        }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </NCard>
+
+          {/* Save Button */}
+          <div className="flex gap-3">
+            <NButton onClick={saveNotificationPreferences} variant="default" size="lg">
+              Save Changes
+            </NButton>
+            <NButton onClick={fetchNotificationPreferences} variant="neutral" size="lg">
+              Cancel
+            </NButton>
           </div>
-        </main>
-      </div>
-    </div>
+        </div>
+      </main>
+    </LearnerLayout>
   )
 }

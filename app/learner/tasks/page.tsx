@@ -13,11 +13,6 @@ import {
   Clock,
   AlertCircle,
   CheckCircle2,
-  Menu,
-  X,
-  LogOut,
-  Settings,
-  Brain,
   Calendar,
   GripVertical,
   ListTodo,
@@ -25,10 +20,12 @@ import {
   Check,
   Loader2,
   Timer,
+  X,
 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
 import { PomodoroTimer } from "@/components/pomodoro/PomodoroTimer"
+import { LearnerLayout } from "@/components/learner-layout"
 
 interface Subtask {
   id: string
@@ -65,7 +62,6 @@ interface NewTaskForm {
 export default function TaskPlannerPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [courses, setCourses] = useState<any[]>([])
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showNewTaskForm, setShowNewTaskForm] = useState(false)
   const [newTask, setNewTask] = useState<NewTaskForm>({
     title: "",
@@ -88,9 +84,9 @@ export default function TaskPlannerPage() {
   const [editSubtaskText, setEditSubtaskText] = useState("")
   const [subtaskLoading, setSubtaskLoading] = useState<string | null>(null)
   const [pomodoroTaskId, setPomodoroTaskId] = useState<string | null>(null)
-  const [pomodoroTaskTitle, setPomodoroTaskTitle] = useState<string>("") 
+  const [pomodoroTaskTitle, setPomodoroTaskTitle] = useState<string>("")
   const [pomodoroSettings, setPomodoroSettings] = useState<any>(null)
-  const [isLoadingPomodoroSettings, setIsLoadingPomodoroSettings] = useState(false) 
+  const [isLoadingPomodoroSettings, setIsLoadingPomodoroSettings] = useState(false)
 
   const supabase = createClient()
 
@@ -125,7 +121,7 @@ export default function TaskPlannerPage() {
     try {
       const response = await fetch('/api/tasks')
       if (!response.ok) throw new Error('Failed to fetch tasks')
-      
+
       const data = await response.json()
       setTasks(data.tasks || [])
     } catch (error) {
@@ -147,7 +143,7 @@ export default function TaskPlannerPage() {
         .eq('learner_id', user.id)
 
       if (error) throw error
-      
+
       const courseList = data?.map(e => e.course).filter(Boolean) || []
       setCourses(courseList)
     } catch (error) {
@@ -190,7 +186,7 @@ export default function TaskPlannerPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-        title: newTask.title,
+          title: newTask.title,
           description: newTask.description || null,
           course_id: newTask.course_id || null,
           priority: newTask.priority,
@@ -227,7 +223,7 @@ export default function TaskPlannerPage() {
 
       if (!response.ok) throw new Error('Failed to delete task')
 
-    setTasks(tasks.filter((t) => t.id !== id))
+      setTasks(tasks.filter((t) => t.id !== id))
     } catch (error) {
       console.error('Error deleting task:', error)
       alert('Failed to delete task. Please try again.')
@@ -311,7 +307,7 @@ export default function TaskPlannerPage() {
       }
 
       const data = await response.json()
-      
+
       if (data.success && data.suggestions) {
         setAiSuggestions(data.suggestions)
       } else {
@@ -320,7 +316,7 @@ export default function TaskPlannerPage() {
     } catch (error) {
       console.error("Error generating AI suggestions:", error)
       setAiError(error instanceof Error ? error.message : "Failed to generate AI suggestions")
-      
+
       // Fallback to basic suggestions
       setAiSuggestions([
         {
@@ -345,10 +341,10 @@ export default function TaskPlannerPage() {
     if (!subtaskText) return
 
     setSubtaskLoading(taskId)
-    
+
     // Clear the text immediately to prevent re-render issues
     setNewSubtaskText({ ...newSubtaskText, [taskId]: '' })
-    
+
     try {
       const response = await fetch(`/api/tasks/${taskId}/subtasks`, {
         method: 'POST',
@@ -536,11 +532,9 @@ export default function TaskPlannerPage() {
     return (
       <NCard
         key={task.id}
-        className={`p-5 group relative overflow-hidden transition-all duration-150 backdrop-blur-sm select-none ${
-          getCardStyle()
-        } ${
-          isDragging ? 'opacity-50 scale-[0.97]' : task.status === 'in-progress' ? 'hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-300/40 dark:hover:shadow-blue-900/40' : 'hover:-translate-y-1 hover:shadow-xl'
-        } ${draggable ? 'cursor-grab active:cursor-grabbing touch-none' : ''}`}
+        className={`p-5 group relative overflow-hidden transition-all duration-150 backdrop-blur-sm select-none ${getCardStyle()
+          } ${isDragging ? 'opacity-50 scale-[0.97]' : task.status === 'in-progress' ? 'hover:-translate-y-1 hover:shadow-2xl hover:shadow-blue-300/40 dark:hover:shadow-blue-900/40' : 'hover:-translate-y-1 hover:shadow-xl'
+          } ${draggable ? 'cursor-grab active:cursor-grabbing touch-none' : ''}`}
         draggable={draggable}
         onDragStart={(e) => draggable && handleDragStart(e, task)}
         onDragEnd={() => setDraggedTask(null)}
@@ -552,15 +546,13 @@ export default function TaskPlannerPage() {
                 <GripVertical className="w-5 h-5 text-foreground/30 flex-shrink-0 mt-1 group-hover:text-main" />
               </div>
             )}
-            <div className={`flex-shrink-0 transition-transform duration-200 ${
-              !isDragging && 'group-hover:scale-110'
-            }`}>
+            <div className={`flex-shrink-0 transition-transform duration-200 ${!isDragging && 'group-hover:scale-110'
+              }`}>
               {getStatusIcon(task.status)}
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className={`font-heading text-lg line-clamp-2 transition-colors ${
-                task.status === 'completed' ? 'line-through text-foreground/70' : ''
-              }`}>
+              <h4 className={`font-heading text-lg line-clamp-2 transition-colors ${task.status === 'completed' ? 'line-through text-foreground/70' : ''
+                }`}>
                 {task.title}
               </h4>
               {task.course && (
@@ -663,9 +655,8 @@ export default function TaskPlannerPage() {
                       </div>
                     ) : (
                       // View Mode
-                      <label className={`flex items-center gap-2 p-2 rounded-base transition-colors ${
-                        task.status === 'in-progress' ? 'hover:bg-main/10 cursor-pointer' : 'cursor-default'
-                      }`}>
+                      <label className={`flex items-center gap-2 p-2 rounded-base transition-colors ${task.status === 'in-progress' ? 'hover:bg-main/10 cursor-pointer' : 'cursor-default'
+                        }`}>
                         <input
                           type="checkbox"
                           checked={subtask.completed}
@@ -673,9 +664,8 @@ export default function TaskPlannerPage() {
                           disabled={task.status !== 'in-progress'}
                           className="rounded w-4 h-4 border-2 border-border text-main focus:ring-main flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
-                        <span className={`flex-1 text-xs font-base ${
-                          subtask.completed ? 'line-through text-foreground/50' : ''
-                        }`}>
+                        <span className={`flex-1 text-xs font-base ${subtask.completed ? 'line-through text-foreground/50' : ''
+                          }`}>
                           {subtask.title}
                         </span>
                         {task.status === 'in-progress' && (
@@ -836,9 +826,8 @@ export default function TaskPlannerPage() {
         className={`transition-all duration-300 ${isDragOver ? 'scale-[1.03] -translate-y-1' : ''}`}
       >
         {/* Column Header */}
-        <div className={`mb-5 p-4 rounded-xl border-2 bg-gradient-to-br from-white to-gray-50 dark:from-secondary-background dark:to-background backdrop-blur-sm ${
-          isDragOver ? 'border-blue-500 dark:border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 shadow-2xl shadow-blue-500/30 scale-[1.02] ring-4 ring-blue-400/30' : 'border-gray-200 dark:border-border'
-        } transition-all duration-300`}>
+        <div className={`mb-5 p-4 rounded-xl border-2 bg-gradient-to-br from-white to-gray-50 dark:from-secondary-background dark:to-background backdrop-blur-sm ${isDragOver ? 'border-blue-500 dark:border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 shadow-2xl shadow-blue-500/30 scale-[1.02] ring-4 ring-blue-400/30' : 'border-gray-200 dark:border-border'
+          } transition-all duration-300`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={`p-2.5 rounded-lg ${color} ${status === 'in-progress' ? 'animate-pulse' : ''} shadow-lg`}>
@@ -856,20 +845,18 @@ export default function TaskPlannerPage() {
         </div>
 
         {/* Drop Zone */}
-        <div className={`space-y-3 min-h-[400px] p-4 rounded-xl border-2 border-dashed transition-all duration-300 ${
-          isDragOver 
-            ? 'border-blue-500 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-950/30 dark:to-indigo-950/30 shadow-inner shadow-blue-500/20 scale-[1.01]' 
-            : 'border-transparent bg-transparent'
-        }`}>
+        <div className={`space-y-3 min-h-[400px] p-4 rounded-xl border-2 border-dashed transition-all duration-300 ${isDragOver
+          ? 'border-blue-500 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-950/30 dark:to-indigo-950/30 shadow-inner shadow-blue-500/20 scale-[1.01]'
+          : 'border-transparent bg-transparent'
+          }`}>
           {columnTasks.map((task) => (
             <TaskCard key={task.id} task={task} />
           ))}
-          
+
           {/* Empty State */}
           {columnTasks.length === 0 && (
-            <div className={`text-center py-16 px-4 rounded-lg transition-all duration-300 ${
-              isDragOver ? 'bg-main/10 border-2 border-dashed border-main' : 'bg-secondary-background/30'
-            }`}>
+            <div className={`text-center py-16 px-4 rounded-lg transition-all duration-300 ${isDragOver ? 'bg-main/10 border-2 border-dashed border-main' : 'bg-secondary-background/30'
+              }`}>
               <div className="mb-3">
                 <Icon className={`w-12 h-12 mx-auto ${isDragOver ? 'text-main' : 'text-foreground/30'} transition-colors`} />
               </div>
@@ -898,283 +885,222 @@ export default function TaskPlannerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Sidebar */}
-      <aside
-        className={`fixed left-0 top-0 h-screen w-64 bg-secondary-background border-r-4 border-border transform transition-transform duration-300 z-40 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        }`}
-      >
-        <div className="p-6 border-b-2 border-border">
-          <Link href="/" className="flex items-center gap-3 hover:-translate-y-1 transition-transform">
-            <div className="w-10 h-10 bg-main border-2 border-border rounded-base flex items-center justify-center shadow-shadow">
-              <Brain className="w-6 h-6 text-main-foreground" />
-            </div>
-            <span className="font-heading text-xl">DigiGyan</span>
-          </Link>
-        </div>
-
-        <nav className="p-4 space-y-2">
-          <Link
-            href="/learner/dashboard"
-            className="flex items-center gap-3 px-4 py-3 rounded-base text-foreground hover:bg-main/5 transition-colors font-base"
-          >
-            <BookOpen className="w-5 h-5" />
-            Dashboard
-          </Link>
-          <Link
-            href="/learner/tasks"
-            className="flex items-center gap-3 px-4 py-3 rounded-base bg-main/10 border-2 border-border text-foreground font-heading"
-          >
-            <Clock className="w-5 h-5" />
-            Task Planner
-          </Link>
-        </nav>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t-2 border-border space-y-2">
-          <Link
-            href="/learner/settings"
-            className="flex items-center gap-3 px-4 py-3 rounded-base text-foreground hover:bg-main/5 transition-colors font-base"
-          >
-            <Settings className="w-5 h-5" />
-            Settings
-          </Link>
-          <button
-            onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-base text-foreground hover:bg-destructive/10 transition-colors font-base"
-          >
-            <LogOut className="w-5 h-5" />
-            Sign Out
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="md:ml-64">
-        {/* Top Bar */}
-        <header className="sticky top-0 z-30 bg-background border-b-4 border-border">
-          <div className="px-6 py-5 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="md:hidden p-2 hover:bg-main/10 rounded-base transition-colors border-2 border-border"
-              >
-                {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
-              <h1 className="text-3xl font-heading">Task Planner</h1>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link href="/learner/productivity">
-                <NButton variant="neutral" size="lg">
-                  <Timer className="w-5 h-5 mr-2" />
-                  Productivity
-                </NButton>
-              </Link>
-              <NButton
-                onClick={() => setShowNewTaskForm(true)}
-                variant="default"
-                size="lg"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                New Task
+    <LearnerLayout>
+      {/* Top Bar */}
+      <header className="sticky top-0 z-30 bg-background border-b-4 border-border">
+        <div className="px-6 py-5 flex items-center justify-between">
+          <h1 className="text-3xl font-heading">Task Planner</h1>
+          <div className="flex items-center gap-3">
+            <Link href="/learner/productivity">
+              <NButton variant="neutral" size="lg">
+                <Timer className="w-5 h-5 mr-2" />
+                Productivity
               </NButton>
-            </div>
+            </Link>
+            <NButton
+              onClick={() => setShowNewTaskForm(true)}
+              variant="default"
+              size="lg"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              New Task
+            </NButton>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Content */}
-        <main className="p-6">
-          {/* AI Suggestions Panel */}
-          {showAiSuggestions && selectedTask && (
-            <NCard className="mb-8 p-8 bg-main/5 border-main/20">
-              <div className="flex items-start justify-between mb-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-main border-2 border-border rounded-base flex items-center justify-center">
-                    <Sparkles className="w-6 h-6 text-main-foreground" />
-                  </div>
-                  <h3 className="font-heading text-2xl">AI Suggestions for "{selectedTask.title}"</h3>
+      {/* Content */}
+      <main className="p-6">
+        {/* AI Suggestions Panel */}
+        {showAiSuggestions && selectedTask && (
+          <NCard className="mb-8 p-8 bg-main/5 border-main/20">
+            <div className="flex items-start justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-main border-2 border-border rounded-base flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-main-foreground" />
                 </div>
-                <button
-                  onClick={() => setShowAiSuggestions(false)}
-                  className="p-2 hover:bg-destructive/10 rounded-base border-2 border-transparent hover:border-border transition-all"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <h3 className="font-heading text-2xl">AI Suggestions for "{selectedTask.title}"</h3>
               </div>
+              <button
+                onClick={() => setShowAiSuggestions(false)}
+                className="p-2 hover:bg-destructive/10 rounded-base border-2 border-transparent hover:border-border transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-              {aiLoading ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-4">
-                  <div className="w-16 h-16 border-4 border-main/30 border-t-main rounded-full animate-spin"></div>
-                  <p className="text-sm text-foreground/70 font-base">Analyzing task and generating suggestions...</p>
-                </div>
-              ) : aiError ? (
-                <div className="p-6 bg-destructive/10 border-2 border-destructive rounded-base">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="font-heading text-lg mb-2">Error</h4>
-                      <p className="text-sm font-base text-foreground/80">{aiError}</p>
-                    </div>
+            {aiLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-4">
+                <div className="w-16 h-16 border-4 border-main/30 border-t-main rounded-full animate-spin"></div>
+                <p className="text-sm text-foreground/70 font-base">Analyzing task and generating suggestions...</p>
+              </div>
+            ) : aiError ? (
+              <div className="p-6 bg-destructive/10 border-2 border-destructive rounded-base">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-heading text-lg mb-2">Error</h4>
+                    <p className="text-sm font-base text-foreground/80">{aiError}</p>
                   </div>
                 </div>
-              ) : (
-                <div className="grid gap-4">
-                  {aiSuggestions.map((suggestion, idx) => (
-                    <div
-                      key={idx}
-                      className="p-5 bg-secondary-background border-2 border-border rounded-base hover:translate-x-1 transition-transform"
-                    >
-                      <div className="flex items-start gap-4">
-                        <Sparkles className="w-5 h-5 text-accent flex-shrink-0 mt-1" />
-                        <div className="flex-1">
-                          {suggestion.title && (
-                            <h4 className="font-heading text-lg mb-2">{suggestion.title}</h4>
-                          )}
-                          <p className="text-sm font-base text-foreground/90 whitespace-pre-wrap">
-                            {suggestion.content}
-                          </p>
-                          {suggestion.subtasks && suggestion.subtasks.length > 0 && (
-                            <div className="mt-4 space-y-2">
-                              {suggestion.subtasks.map((subtask: string, subIdx: number) => (
-                                <div
-                                  key={subIdx}
-                                  className="flex items-start gap-2 p-2 bg-main/5 rounded-base text-sm font-base"
-                                >
-                                  <span className="text-main font-heading">{subIdx + 1}.</span>
-                                  <span>{subtask}</span>
-                                </div>
-                              ))}
-                              {/* Add AI Subtasks Button */}
-                              <div className="mt-4 pt-3 border-t-2 border-border">
-                                <NButton
-                                  onClick={() => selectedTask && handleAddAiSubtasks(selectedTask.id, suggestion.subtasks)}
-                                  disabled={subtaskLoading === selectedTask?.id}
-                                  variant="default"
-                                  size="sm"
-                                  className="w-full"
-                                >
-                                  {subtaskLoading === selectedTask?.id ? (
-                                    <>
-                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                      Adding Subtasks...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Plus className="w-4 h-4 mr-2" />
-                                      Add These {suggestion.subtasks.length} Subtasks
-                                    </>
-                                  )}
-                                </NButton>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {aiSuggestions.map((suggestion, idx) => (
+                  <div
+                    key={idx}
+                    className="p-5 bg-secondary-background border-2 border-border rounded-base hover:translate-x-1 transition-transform"
+                  >
+                    <div className="flex items-start gap-4">
+                      <Sparkles className="w-5 h-5 text-accent flex-shrink-0 mt-1" />
+                      <div className="flex-1">
+                        {suggestion.title && (
+                          <h4 className="font-heading text-lg mb-2">{suggestion.title}</h4>
+                        )}
+                        <p className="text-sm font-base text-foreground/90 whitespace-pre-wrap">
+                          {suggestion.content}
+                        </p>
+                        {suggestion.subtasks && suggestion.subtasks.length > 0 && (
+                          <div className="mt-4 space-y-2">
+                            {suggestion.subtasks.map((subtask: string, subIdx: number) => (
+                              <div
+                                key={subIdx}
+                                className="flex items-start gap-2 p-2 bg-main/5 rounded-base text-sm font-base"
+                              >
+                                <span className="text-main font-heading">{subIdx + 1}.</span>
+                                <span>{subtask}</span>
                               </div>
+                            ))}
+                            {/* Add AI Subtasks Button */}
+                            <div className="mt-4 pt-3 border-t-2 border-border">
+                              <NButton
+                                onClick={() => selectedTask && handleAddAiSubtasks(selectedTask.id, suggestion.subtasks)}
+                                disabled={subtaskLoading === selectedTask?.id}
+                                variant="default"
+                                size="sm"
+                                className="w-full"
+                              >
+                                {subtaskLoading === selectedTask?.id ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Adding Subtasks...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add These {suggestion.subtasks.length} Subtasks
+                                  </>
+                                )}
+                              </NButton>
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </NCard>
-          )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </NCard>
+        )}
 
-          {/* New Task Form */}
-          {showNewTaskForm && (
-            <NCard className="mb-8 p-8 border-main/20">
-              <h3 className="font-heading text-2xl mb-5">Create New Task</h3>
-              <div className="space-y-5">
+        {/* New Task Form */}
+        {showNewTaskForm && (
+          <NCard className="mb-8 p-8 border-main/20">
+            <h3 className="font-heading text-2xl mb-5">Create New Task</h3>
+            <div className="space-y-5">
+              <div>
+                <NLabel className="mb-2">Task Title *</NLabel>
+                <NInput
+                  placeholder="Enter task title..."
+                  value={newTask.title}
+                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                />
+              </div>
+              <div>
+                <NLabel className="mb-2">Description</NLabel>
+                <textarea
+                  className="w-full px-5 py-3 rounded-base border-2 border-border bg-background font-base text-sm focus:outline-none focus:border-main transition-colors"
+                  placeholder="Enter task description..."
+                  rows={3}
+                  value={newTask.description}
+                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <NLabel className="mb-2">Task Title *</NLabel>
-                  <NInput
-                    placeholder="Enter task title..."
-                    value={newTask.title}
-                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <NLabel className="mb-2">Description</NLabel>
-                  <textarea
+                  <NLabel className="mb-2">Course (Optional)</NLabel>
+                  <select
                     className="w-full px-5 py-3 rounded-base border-2 border-border bg-background font-base text-sm focus:outline-none focus:border-main transition-colors"
-                    placeholder="Enter task description..."
-                    rows={3}
-                    value={newTask.description}
-                    onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <NLabel className="mb-2">Course (Optional)</NLabel>
-                    <select
-                      className="w-full px-5 py-3 rounded-base border-2 border-border bg-background font-base text-sm focus:outline-none focus:border-main transition-colors"
-                      value={newTask.course_id}
-                      onChange={(e) => setNewTask({ ...newTask, course_id: e.target.value })}
-                    >
-                      <option value="">No course</option>
-                      {courses.map((course) => (
-                        <option key={course.id} value={course.id}>
-                          {course.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <NLabel className="mb-2">Priority</NLabel>
-                    <select
-                      className="w-full px-5 py-3 rounded-base border-2 border-border bg-background font-base text-sm focus:outline-none focus:border-main transition-colors"
-                      value={newTask.priority}
-                      onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as any })}
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                    </select>
-                  </div>
+                    value={newTask.course_id}
+                    onChange={(e) => setNewTask({ ...newTask, course_id: e.target.value })}
+                  >
+                    <option value="">No course</option>
+                    {courses.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.title}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <NLabel className="mb-2">Due Date (Optional)</NLabel>
-                  <NInput
-                    type="date"
-                    value={newTask.due_date}
-                    onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <NButton onClick={handleAddTask} variant="default">
-                    Create Task
-                  </NButton>
-                  <NButton onClick={() => setShowNewTaskForm(false)} variant="neutral">
-                    Cancel
-                  </NButton>
+                  <NLabel className="mb-2">Priority</NLabel>
+                  <select
+                    className="w-full px-5 py-3 rounded-base border-2 border-border bg-background font-base text-sm focus:outline-none focus:border-main transition-colors"
+                    value={newTask.priority}
+                    onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as any })}
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
                 </div>
               </div>
-            </NCard>
-          )}
+              <div>
+                <NLabel className="mb-2">Due Date (Optional)</NLabel>
+                <NInput
+                  type="date"
+                  value={newTask.due_date}
+                  onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+                />
+              </div>
+              <div className="flex gap-3">
+                <NButton onClick={handleAddTask} variant="default">
+                  Create Task
+                </NButton>
+                <NButton onClick={() => setShowNewTaskForm(false)} variant="neutral">
+                  Cancel
+                </NButton>
+              </div>
+            </div>
+          </NCard>
+        )}
 
-          {/* Kanban Board */}
-          <div className="grid md:grid-cols-3 gap-8">
-            <ColumnDropZone
-              title="To Do"
-              status="todo"
-              tasks={todoTasks}
-              color="bg-gradient-to-br from-slate-600 to-gray-700"
-              icon={AlertCircle}
-            />
-            <ColumnDropZone
-              title="In Progress"
-              status="in-progress"
-              tasks={inProgressTasks}
-              color="bg-gradient-to-br from-indigo-600 to-blue-600"
-              icon={Clock}
-            />
-            <ColumnDropZone
-              title="Completed"
-              status="completed"
-              tasks={completedTasks}
-              color="bg-gradient-to-br from-emerald-600 to-teal-600"
-              icon={CheckCircle2}
-            />
-          </div>
-        </main>
-      </div>
+        {/* Kanban Board */}
+        <div className="grid md:grid-cols-3 gap-8">
+          <ColumnDropZone
+            title="To Do"
+            status="todo"
+            tasks={todoTasks}
+            color="bg-gradient-to-br from-slate-600 to-gray-700"
+            icon={AlertCircle}
+          />
+          <ColumnDropZone
+            title="In Progress"
+            status="in-progress"
+            tasks={inProgressTasks}
+            color="bg-gradient-to-br from-indigo-600 to-blue-600"
+            icon={Clock}
+          />
+          <ColumnDropZone
+            title="Completed"
+            status="completed"
+            tasks={completedTasks}
+            color="bg-gradient-to-br from-emerald-600 to-teal-600"
+            icon={CheckCircle2}
+          />
+        </div>
+      </main>
 
       {/* Pomodoro Timer Modal */}
       {pomodoroTaskId && !isLoadingPomodoroSettings && (
@@ -1191,8 +1117,6 @@ export default function TaskPlannerPage() {
           />
         </div>
       )}
-    </div>
+    </LearnerLayout>
   )
 }
-
-
